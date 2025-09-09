@@ -1,0 +1,72 @@
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    log /dev/log    local0
+    log /dev/log    local1 notice
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+    # Default SSL material locations
+    ca-base /etc/ssl/certs
+    crt-base /etc/ssl/private
+
+    # Modern configuration
+    ssl-default-bind-ciphers ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS
+    ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
+
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option                  log-health-checks
+    option                  forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           20s
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+
+#---------------------------------------------------------------------
+# kubernetes apiserver frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend kubernetes-apiserver
+    mode                 tcp
+    bind                 *:{{ apiserver_port }}
+    option               tcplog
+    default_backend      kubernetes-apiserver
+
+#---------------------------------------------------------------------
+# round robin balancing between the various backends
+#---------------------------------------------------------------------
+backend kubernetes-apiserver
+    option                  tcp-check
+    balance     roundrobin
+{% for host in groups['boostrap-node'] %}
+    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
+{% endfor %}
+{% if groups['k8s-master'] is defined %}
+{% for host in groups['k8s-master'] %}
+    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
+{% endfor %}
+{% endif %}
+
+#---------------------------------------------------------------------
+# HAProxy Stats
+#---------------------------------------------------------------------
+listen stats
+    bind *:8404
+    stats enable
+    stats uri /stats
+    stats refresh 5s
+    stats admin if TRUE
