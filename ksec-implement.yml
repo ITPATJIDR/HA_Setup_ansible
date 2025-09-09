@@ -16,12 +16,12 @@
     - haproxy-keepalived
 
 
-# - name: Boostrap Master Node
-#   hosts: boostrap-node #[boostrap-node] ตรง host.ini
-#   become: yes
-#   roles:
-#     - bootstrap
-#     - calico-apply
+- name: Boostrap Master Node
+  hosts: boostrap-node #[boostrap-node] ตรง host.ini
+  become: yes
+  roles:
+    - bootstrap
+    - calico-apply
 
 
 # - name: Join Master Node
