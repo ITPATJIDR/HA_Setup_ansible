@@ -8,3 +8,4 @@ admin: boostrap # User admin
 
 vip_address: "192.168.101.17/24"
 apiserver_port: 6443
+control_plane_port: 8443
