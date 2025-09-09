@@ -38,4 +38,5 @@
     state: started
 
 - name: "Pull All Images"
-  ansible.builtin.shell: kubeadm config images pull---
+  ansible.builtin.shell: kubeadm config images pull
+  
