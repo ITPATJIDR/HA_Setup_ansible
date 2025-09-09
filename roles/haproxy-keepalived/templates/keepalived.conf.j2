@@ -1,30 +1,23 @@
 ! Configuration File for keepalived
-
 global_defs {
     router_id LVS_DEVEL
-    enable_script_security
-    script_user root
-    enable_snmp_checker
 }
-
 vrrp_script check_apiserver {
   script "/etc/keepalived/check_apiserver.sh"
   interval 3
-  timeout 10
-  fall 5
-  rise 2
   weight -2
+  fall 10
+  rise 2
 }
 
 vrrp_instance VI_1 {
     state MASTER
     interface {{ ansible_default_ipv4.interface }}
-    virtual_router_id 51
-    priority 100
-    advert_int 1
+    virtual_router_id 151
+    priority 255
     authentication {
         auth_type PASS
-        auth_pass 42
+        auth_pass P@##D321!
     }
     virtual_ipaddress {
         {{ vip_address }}

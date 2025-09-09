@@ -1,72 +1,44 @@
-#---------------------------------------------------------------------
-# Global settings
-#---------------------------------------------------------------------
 global
-    log /dev/log    local0
-    log /dev/log    local1 notice
-    chroot /var/lib/haproxy
-    stats socket /run/haproxy/admin.sock mode 660 level admin
-    stats timeout 30s
-    user haproxy
-    group haproxy
-    daemon
+        log /dev/log    local0
+        log /dev/log    local1 notice
+        chroot /var/lib/haproxy
+        stats socket /run/haproxy/admin.sock mode 660 level admin
+        stats timeout 30s
+        user haproxy
+        group haproxy
+        daemon
 
-    # Default SSL material locations
-    ca-base /etc/ssl/certs
-    crt-base /etc/ssl/private
+        # Default SSL material locations
+        ca-base /etc/ssl/certs
+        crt-base /etc/ssl/private
 
-    # Modern configuration
-    ssl-default-bind-ciphers ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS
-    ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
-
-defaults
-    mode                    http
-    log                     global
-    option                  httplog
-    option                  dontlognull
-    option                  log-health-checks
-    option                  forwardfor       except 127.0.0.0/8
-    option                  redispatch
-    retries                 3
-    timeout http-request    10s
-    timeout queue           20s
-    timeout connect         10s
-    timeout client          1m
-    timeout server          1m
-    timeout http-keep-alive 10s
-    timeout check           10s
-    maxconn                 3000
+        # See: https://ssl-config.mozilla.org/#server=haproxy&server-version=2.0.3&config=intermediate
+        ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+        ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+        ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
 
 #---------------------------------------------------------------------
-# kubernetes apiserver frontend which proxys to the backends
+# apiserver frontend which proxys to the masters
 #---------------------------------------------------------------------
-frontend kubernetes-apiserver
-    mode                 tcp
-    bind                 *:{{ control_plane_port | default(apiserver_port) }}
-    option               tcplog
-    default_backend      kubernetes-apiserver
-
+frontend apiserver
+    bind *:{{ control_plane_port | default(apiserver_port) }}
+    mode tcp
+    option tcplog
+    default_backend apiserver
 #---------------------------------------------------------------------
-# round robin balancing between the various backends
+# round robin balancing for apiserver
 #---------------------------------------------------------------------
-backend kubernetes-apiserver
-    option                  tcp-check
+backend apiserver
+    option httpchk GET /healthz
+    http-check expect status 200
+    mode tcp
+    option ssl-hello-chk
     balance     roundrobin
 {% for host in groups['boostrap-node'] %}
-    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
+        server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
 {% endfor %}
 {% if groups['k8s-master'] is defined %}
 {% for host in groups['k8s-master'] %}
-    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
+        server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
 {% endfor %}
 {% endif %}
-
-#---------------------------------------------------------------------
-# HAProxy Stats
-#---------------------------------------------------------------------
-listen stats
-    bind *:8404
-    stats enable
-    stats uri /stats
-    stats refresh 5s
-    stats admin if TRUE
