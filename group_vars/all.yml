@@ -1,0 +1,10 @@
+hosts_file: 
+  - "192.168.100.51 master-a"
+  - "192.168.100.52 master-b"
+  - "192.168.100.53 worker-a"
+  - "192.168.100.50 lb"
+
+admin: kubeadmin # User admin
+
+vip_address: "192.168.100.50/24"
+apiserver_port: 6443

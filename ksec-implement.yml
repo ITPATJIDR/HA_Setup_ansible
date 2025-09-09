@@ -1,0 +1,70 @@
+# add haproxy keepalived master only 
+# istio
+
+---
+- name: Pre-install Kubernetes
+  hosts: all
+  become: yes
+  roles:
+    - pre-install-kube
+    - add-repo-kube
+
+- name: Install HAProxy and Keepalived on Master Node
+  hosts: boostrap-node,k8s-master
+  become: yes
+  roles:
+    - haproxy-keepalived
+
+
+- name: Boostrap Master Node
+  hosts: boostrap-node #[boostrap-node] ตรง host.ini
+  become: yes
+  roles:
+    - bootstrap
+    - calico-apply
+
+
+- name: Join Master Node
+  hosts: k8s-master #[k8s-master] ตรง host.ini
+  become: yes
+  roles:
+    - join-master
+
+
+- name: Join Worker Node
+  hosts: k8s-worker #[k8s-worker] ตรง host.ini
+  become: yes
+  roles:
+    - join-worker
+
+
+- name: Set Label Worker Node
+  hosts: boostrap-node
+  tasks:
+    - name: approve csr worker node
+      ansible.builtin.shell: |
+        for kubeletcsr in $(kubectl -n kube-system get csr | grep kubernetes.io/kubelet-serving | awk '{ print $1 }'); do
+          kubectl certificate approve $kubeletcsr
+        done
+
+    - name: add labels worker nodes
+      ansible.builtin.shell: "kubectl label node {{ item }} node-role.kubernetes.io/worker="
+      loop: # ใส่ให้ครบ 5 เครื่องชื่อต้องตาม domain เป๊ะ ๆ 
+      - worker-a
+
+    - name: apply kube metric
+      ansible.builtin.shell: |
+        kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+    # ให้แก้เลขตรง blockSize เป็นค่าที่ต้องการคือค่าเดียวกับ Host Prefix
+    - name: reset block size 
+      ansible.builtin.shell: |
+        kubectl patch ippool default-ipv4-ippool --type='merge' -p '{"spec":{"blockSize": 22}}'
+    
+    - name: delete old block size config
+      ansible.builtin.shell: |
+        kubectl delete blockaffinities.crd.projectcalico.org --all
+
+    - name: restart calico node
+      ansible.builtin.shell: kubectl rollout restart ds calico-node -n kube-system
+

@@ -1,0 +1,4 @@
+---
+- name: "Join Worker node"
+  ansible.builtin.shell: "{{ hostvars[item]['join_node'] }}"
+  loop: "{{ groups['boostrap-node'] }}"

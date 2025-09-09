@@ -1,0 +1,13 @@
+kube_minior: 1.27 # ไม่ต้องใส่ patch
+
+kube_version: 1.27.6 # ใส่ให้ครับยังเลข patch
+
+pod_subnet: "10.128.0.0/16" # Pod Subnet ของ Cluster
+
+svc_subnet: "10.129.0.0/16" # Service Subnet ของ Cluster
+
+admin: kubeadmin # User admin ที่ลูกค้าให้มา
+
+home_admin: /home/kubeadmin # ไม่ต้องใส่ / ตามหลังปิดท้าย
+
+endpoint_lb: lb # ชื่อของ Loadbalance ใส่เป็น IP ไม่ได้

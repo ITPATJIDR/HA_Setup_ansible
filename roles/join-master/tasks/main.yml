@@ -1,0 +1,55 @@
+---
+- name: "Join master node"
+  ansible.builtin.shell: "{{ hostvars[item]['join_node'] }} --control-plane --certificate-key {{ hostvars[item]['certficate_key'] }}"
+  loop: "{{ groups['boostrap-node'] }}"
+
+- name: "Create Directory kubeconfig"
+  ansible.builtin.file:
+    path: "{{ item }}/.kube"
+    state: directory
+    mode: '0755'
+    owner: "{{ ansible_user | default('root') }}"
+    group: "{{ ansible_user | default('root') }}"
+  loop:
+  - "{{ home_admin }}"
+  - "/root"
+
+- name: "Copy File kubeconfig"
+  ansible.builtin.shell: "cp /etc/kubernetes/admin.conf {{ item }}/.kube/config"
+  loop:
+  - "{{ home_admin }}"
+  - "/root"
+
+- name: "Change owner file kubeconfig to admin"
+  ansible.builtin.file: 
+    path: "{{ home_admin }}/.kube"
+    owner: "{{ admin }}"
+    group: "{{ admin }}"
+    recurse: yes  # ใช้ถ้าอยากให้ไฟล์ทั้งหมดในโฟลเดอร์เปลี่ยน owner ด้วย
+
+- name: "Change owner file kubeconfig to root"
+  ansible.builtin.file: 
+    path: "/root/.kube"
+    owner: root
+    group: root
+    recurse: yes  # ใช้ถ้าอยากให้ไฟล์ทั้งหมดในโฟลเดอร์เปลี่ยน owner ด้วย
+
+- name: "Set Environment KUBECONFIG admin"
+  ansible.builtin.lineinfile:
+    path: "{{ home_admin }}/.bash_profile"
+    line: "export KUBECONFIG={{ home_admin }}/.kube/config"
+    state: present
+    insertbefore: EOF 
+
+- name: "Set Environment KUBECONFIG root"
+  ansible.builtin.lineinfile:
+    path: "/root/.bash_profile"
+    line: "export KUBECONFIG=/etc/kubernetes/admin.conf"
+    state: present
+    insertbefore: EOF 
+
+- name: "Approve kubelet-serving CSRs"
+  ansible.builtin.shell: |
+    for kubeletcsr in $(kubectl -n kube-system get csr | grep kubernetes.io/kubelet-serving | awk '{ print $1 }'); do
+      kubectl certificate approve $kubeletcsr
+    done

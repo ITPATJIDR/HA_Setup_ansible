@@ -1,0 +1,9 @@
+# จำนวนเครื่องทั้งหมดที่อยู่ใน Cluster ที่จะสร้างระบุ IP ก่อนชื่อ domain ของ server ใส่ domain ของ loadBalance ไปด้วย
+# หรือก็คือ เครื่องพวกนี้ต้องใส่ไปใน /etc/hosts (ถ้ามีจดใน DNS ก็หายห่วงแต่ต้องทำเพื่อ)
+hosts_file: 
+  - "192.168.100.51 master-a"
+  - "192.168.100.52 master-b"
+  - "192.168.100.53 worker-a"
+  - "192.168.100.50 lb"
+
+admin: kubeadmin # User admin

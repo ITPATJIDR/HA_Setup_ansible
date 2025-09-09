@@ -1,0 +1,110 @@
+---
+- name: "Set hostname for each node"
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: "Check localhost exits in file /etc/hosts"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"  
+    state: present
+    create: yes
+
+- name: "Check All Host In Cluster Kubernetes"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"  
+    state: present
+    create: yes
+  loop: "{{ hosts_file }}"
+
+- name: "Swap Off Memory"
+  ansible.builtin.command: swapoff -a
+
+- name: "Remove swap entries from /etc/fstab"
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^\s*([^#]\S+\s+\S+\s+swap\s+\S+.*)$'
+    replace: '# \1'
+
+- name: "Create /etc/modules-load.d/k8s.conf"
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: '0644'
+
+- name: "Load kernel modules immediately"
+  ansible.builtin.command: modprobe {{ item }}
+  loop:
+    - overlay
+    - br_netfilter
+  ignore_errors: true
+
+- name: "Create /etc/sysctl.d/k8s.conf"
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+    mode: '0644'
+
+- name: "Load Kernel Parameters"
+  ansible.builtin.command: sysctl --system
+
+- name: "Install Docker"
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+    update_cache: yes
+
+- name: "Create containerd config directory"
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+
+- name: "Generate Containerd Config"
+  ansible.builtin.command: containerd config default
+  register: containerd_config
+
+- name: "Save Containerd Config to File"
+  ansible.builtin.copy:
+    content: "{{ containerd_config.stdout }}"
+    dest: /etc/containerd/config.toml
+
+- name: "Set SystemdCgroup is true"
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+
+- name: "Start and Enable Containerd"    
+  ansible.builtin.systemd:
+    name: containerd
+    enabled: yes
+    state: started
+
+- name: "Start and Enable Docker"    
+  ansible.builtin.systemd:
+    name: docker
+    enabled: yes
+    state: started 
+
+- name: "Add admin to docker group"
+  ansible.builtin.user:
+    name: "{{ admin }}"
+    groups: docker
+    append: yes
+
+- name: "Ensure containerd.sock is owned by root:docker"
+  ansible.builtin.file:
+    path: /var/run/containerd/containerd.sock
+    owner: root
+    group: docker
+
+- name: "Save Containerd Config to File"
+  ansible.builtin.copy:
+    content: "runtime-endpoint: unix:///var/run/containerd/containerd.sock"
+    dest: /etc/crictl.yaml

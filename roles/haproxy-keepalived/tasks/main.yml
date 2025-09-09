@@ -1,0 +1,65 @@
+---
+- name: "Check if current host is a master node"
+  set_fact:
+    is_master: "{{ inventory_hostname in (master_nodes | map('regex_replace', '^[^\\s]+\\s+(.*)$', '\\1') | list) }}"
+
+- name: "Install HAProxy and Keepalived on master nodes only"
+  ansible.builtin.apt:
+    name:
+      - haproxy
+      - keepalived
+    state: present
+    update_cache: yes
+  when: is_master
+
+- name: "Deploy apiserver health check script"
+  copy:
+    dest: /etc/keepalived/check_apiserver.sh
+    mode: '0755'
+    content: |
+      #!/bin/sh
+      APISERVER_VIP={{ vip_address.split('/')[0] }}
+      APISERVER_DEST_PORT={{ apiserver_port }}
+
+      errorExit() {
+        echo "*** $*" 1>&2
+        exit 1
+      }
+
+      curl --silent --max-time 2 --insecure https://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET localhost"
+      if ip addr | grep -q ${APISERVER_VIP}; then
+        curl --silent --max-time 2 --insecure https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET VIP"
+      fi
+  when: is_master
+
+- name: "Configure keepalived"
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: '0644'
+  when: is_master
+
+- name: "Backup default haproxy.cfg"
+  ansible.builtin.copy:
+    src: /etc/haproxy/haproxy.cfg
+    dest: /etc/haproxy/haproxy.cfg-org
+    remote_src: yes
+  ignore_errors: true
+  when: is_master
+
+- name: "Configure HAProxy"
+  template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    mode: '0644'
+  when: is_master
+
+- name: "Enable and start services"
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop:
+    - keepalived
+    - haproxy
+  when: is_master

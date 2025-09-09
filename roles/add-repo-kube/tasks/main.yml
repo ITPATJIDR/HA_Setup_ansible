@@ -1,0 +1,41 @@
+---
+- name: "Install required packages"
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - apt-transport-https
+    state: present
+
+- name: "Add Kubernetes GPG key"
+  ansible.builtin.shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v{{ kube_minior }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: "Add Kubernetes repository"
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kube_minior }}/deb/ /"
+    mode: '0644'
+
+- name: "Update package cache"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install Kubernetes components"
+  ansible.builtin.apt:
+    name:
+      - kubelet={{ kube_version }}-1.1
+      - kubeadm={{ kube_version }}-1.1
+      - kubectl={{ kube_version }}-1.1
+    state: present
+
+- name: "Start and Enable Kubelet"    
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+
+- name: "Pull All Images"
+  ansible.builtin.shell: kubeadm config images pull---
