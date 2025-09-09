@@ -1,4 +1,4 @@
-v---
+---
   - name: "Check if Kubernetes is already initialized"
     ansible.builtin.stat:
       path: /etc/kubernetes/admin.conf
