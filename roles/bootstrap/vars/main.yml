@@ -10,6 +10,6 @@ admin: kubeadmin # User admin ที่ลูกค้าให้มา
 
 home_admin: /home/kubeadmin # ไม่ต้องใส่ / ตามหลังปิดท้าย
 
-endpoint_lb: vip-k8s-master # ชื่อของ Loadbalance ใส่เป็น IP ไม่ได้
+endpoint_lb: vip # ชื่อของ Loadbalance ใส่เป็น IP ไม่ได้
 
 control_plane_port: 8443 # Port for control plane endpoint

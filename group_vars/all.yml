@@ -1,8 +1,8 @@
 hosts_file: 
-  - "192.168.100.11 master-a"
-  - "192.168.100.12 master-b"
-  - "192.168.100.13 worker-a"
-  - "192.168.100.17 vip"
+  - "192.168.101.11 master-a"
+  - "192.168.101.12 master-b"
+  - "192.168.101.13 worker-a"
+  - "192.168.101.17 vip"
 
 admin: boostrap # User admin
 
