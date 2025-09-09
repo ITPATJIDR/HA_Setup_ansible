@@ -29,6 +29,7 @@
       - kubelet={{ kube_version }}-1.1
       - kubeadm={{ kube_version }}-1.1
       - kubectl={{ kube_version }}-1.1
+      - cri-tools
     state: present
 
 - name: "Start and Enable Kubelet"    
@@ -39,4 +40,22 @@
 
 - name: "Pull All Images"
   ansible.builtin.shell: kubeadm config images pull
+
+- name: "Verify Kubernetes tools installation"
+  ansible.builtin.shell: |
+    echo "kubectl: $(kubectl version --client 2>/dev/null | head -1)"
+    echo "kubeadm: $(kubeadm version 2>/dev/null | head -1)"
+    echo "kubelet: $(kubelet --version 2>/dev/null | head -1)"
+    echo "crictl: $(crictl --version 2>/dev/null | head -1)"
+  register: k8s_versions
+
+- name: "Display Kubernetes versions"
+  ansible.builtin.debug:
+    var: k8s_versions.stdout_lines
+
+- name: "Verify kubelet service is active"
+  ansible.builtin.systemd:
+    name: kubelet
+    state: started
+    enabled: yes
   
