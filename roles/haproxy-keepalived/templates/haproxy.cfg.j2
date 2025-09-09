@@ -53,11 +53,11 @@ backend kubernetes-apiserver
     option                  tcp-check
     balance     roundrobin
 {% for host in groups['boostrap-node'] %}
-    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ control_plane_port | default(apiserver_port) }} check
+    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
 {% endfor %}
 {% if groups['k8s-master'] is defined %}
 {% for host in groups['k8s-master'] %}
-    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ control_plane_port | default(apiserver_port) }} check
+    server {{ hostvars[host]['inventory_hostname'] }} {{ hostvars[host]['ansible_default_ipv4']['address'] }}:{{ apiserver_port }} check
 {% endfor %}
 {% endif %}
 
