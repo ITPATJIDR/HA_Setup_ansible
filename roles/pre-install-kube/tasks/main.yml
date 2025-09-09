@@ -50,9 +50,17 @@
   ignore_errors: true
 
 - name: "Verify kernel modules are loaded"
-  ansible.builtin.shell: lsmod | grep -E "(overlay|br_netfilter)" | wc -l
+  ansible.builtin.shell: |
+    overlay_loaded=$(lsmod | grep -c "^overlay")
+    br_netfilter_loaded=$(lsmod | grep -c "^br_netfilter")
+    if [ "$overlay_loaded" -eq 1 ] && [ "$br_netfilter_loaded" -eq 1 ]; then
+      echo "Both modules loaded successfully"
+    else
+      echo "Missing modules: overlay=$overlay_loaded, br_netfilter=$br_netfilter_loaded"
+      exit 1
+    fi
   register: modules_loaded
-  failed_when: modules_loaded.stdout != "2"
+  failed_when: modules_loaded.rc != 0
 
 - name: "Create /etc/sysctl.d/k8s.conf"
   ansible.builtin.copy:
