@@ -9,6 +9,12 @@
     - pre-install-kube
     - add-repo-kube
 
+- name: Install HAProxy and Keepalived on Master Node
+  hosts: boostrap-node
+  become: yes
+  roles:
+    - haproxy-keepalived
+
 # - name: Install HAProxy and Keepalived on Master Node
 #   hosts: boostrap-node,k8s-master
 #   become: yes

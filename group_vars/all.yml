@@ -1,10 +1,10 @@
 hosts_file: 
-  - "192.168.100.51 master-a"
-  - "192.168.100.52 master-b"
-  - "192.168.100.53 worker-a"
-  - "192.168.100.50 lb"
+  - "192.168.100.11 master-a"
+  - "192.168.100.12 master-b"
+  - "192.168.100.13 worker-a"
+  - "192.168.100.17 vip"
 
-admin: kubeadmin # User admin
+admin: boostrap # User admin
 
-vip_address: "192.168.100.50/24"
+vip_address: "192.168.101.17/24"
 apiserver_port: 6443
