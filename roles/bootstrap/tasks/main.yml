@@ -1,4 +1,4 @@
----
+v---
   - name: "Check if Kubernetes is already initialized"
     ansible.builtin.stat:
       path: /etc/kubernetes/admin.conf
@@ -35,15 +35,12 @@
   
   - name: "Create kubeconfig directory for admin user"
     ansible.builtin.shell: "mkdir -p {{ home_admin }}/.kube"
-    become_user: "{{ admin }}"
 
   - name: "Copy kubeconfig to admin user"
     ansible.builtin.shell: "cp /etc/kubernetes/admin.conf {{ home_admin }}/.kube/config"
-    become_user: "{{ admin }}"
 
   - name: "Set proper ownership for admin kubeconfig"
     ansible.builtin.shell: "chown $(id -u):$(id -g) {{ home_admin }}/.kube/config"
-    become_user: "{{ admin }}"
 
   - name: "Create kubeconfig directory for root user"
     ansible.builtin.shell: "mkdir -p /root/.kube"
