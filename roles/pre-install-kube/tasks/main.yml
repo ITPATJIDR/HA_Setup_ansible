@@ -80,6 +80,12 @@
     state: present
     update_cache: yes
 
+- name: "Install Helm"
+  ansible.builtin.apt:
+    name: helm
+    state: present
+    update_cache: yes
+
 - name: "Create containerd config directory"
   ansible.builtin.file:
     path: /etc/containerd

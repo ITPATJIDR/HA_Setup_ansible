@@ -21,6 +21,7 @@
   become: yes
   roles:
     - bootstrap
+    - install-helm
     - calico-apply
 
 
