@@ -37,6 +37,7 @@
     name: kubelet
     enabled: yes
     state: started
+  when: inventory_hostname in groups['boostrap-node']
 
 - name: "Pull All Images"
   ansible.builtin.shell: kubeadm config images pull
