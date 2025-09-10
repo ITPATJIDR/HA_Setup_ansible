@@ -1,34 +1,5 @@
 ---
-- name: "Install Tigera Operator"
+- name: "Install Calico "
   ansible.builtin.shell: |
     kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/tigera-operator.yaml
   ignore_errors: yes
-
-- name: "Create Calico Installation"
-  ansible.builtin.k8s:
-    state: present
-    definition:
-      apiVersion: operator.tigera.io/v1
-      kind: Installation
-      metadata:
-        name: default
-      spec:
-        calicoNetwork:
-          ipPools:
-          - blockSize: 26
-            cidr: "{{ pod_subnet }}"
-            encapsulation: VXLANCrossSubnet
-            natOutgoing: Enabled
-            nodeSelector: all()
-
-- name: "Wait for Calico to be ready"
-  ansible.builtin.k8s_info:
-    api_version: apps/v1
-    kind: DaemonSet
-    name: calico-node
-    namespace: kube-system
-    wait: true
-    wait_condition:
-      type: Available
-      status: "True"
-    wait_timeout: 600
