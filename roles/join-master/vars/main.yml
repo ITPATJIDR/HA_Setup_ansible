@@ -6,4 +6,4 @@ home_admin: /home/boostrap
 endpoint_lb: "vip"
 
 # Control plane port for load balancer
-control_plane_port: "{{ control_plane_port | default(8443) }}"
+control_plane_port: "8443"
