@@ -1,3 +1,3 @@
-admin: boostrap # User admin ที่ลูกค้าให้มา
+admin: bootstrap # User admin ที่ลูกค้าให้มา
 
-home_admin: /home/boostrap
+home_admin: /home/bootstrap

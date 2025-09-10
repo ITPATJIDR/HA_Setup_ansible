@@ -4,7 +4,7 @@
     kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} \
       --token {{ hostvars[item]['join_token'] }} \
       --discovery-token-ca-cert-hash {{ hostvars[item]['discovery_token_ca_cert_hash'] }}
-  loop: "{{ groups['boostrap-node'] }}"
+  loop: "{{ groups['bootstrap-node'] }}"
   vars:
-    endpoint_lb: "{{ hostvars[groups['boostrap-node'][0]]['endpoint_lb'] }}"
-    control_plane_port: "{{ hostvars[groups['boostrap-node'][0]]['control_plane_port'] }}"
+    endpoint_lb: "{{ hostvars[groups['bootstrap-node'][0]]['endpoint_lb'] }}"
+    control_plane_port: "{{ hostvars[groups['bootstrap-node'][0]]['control_plane_port'] }}"
