@@ -1,3 +1,6 @@
 admin: boostrap # User admin ที่ลูกค้าให้มา
 
 home_admin: /home/boostrap
+
+# Load balancer endpoint for joining master nodes
+endpoint_lb: "{{ vip_address.split('/')[0] }}"
