@@ -85,7 +85,11 @@
 
   - name: "Debug certificate key"
     ansible.builtin.debug:
-      msg: "Certificate key value: '{{ init_output.stdout_lines[39] }}'"
+      msg: "Certificate key value: '{{ init_output }}'"
+
+  - name: "Debug certificate key"
+    ansible.builtin.debug:
+      msg: "Certificate key value: '{{ init_output.stdout_lines[30] }}'"
 
   - name: "Create join token for master nodes"
     ansible.builtin.shell: kubeadm token create --print-join-command
