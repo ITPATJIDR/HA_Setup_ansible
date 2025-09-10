@@ -1,9 +1,4 @@
-# จำนวนเครื่องทั้งหมดที่อยู่ใน Cluster ที่จะสร้างระบุ IP ก่อนชื่อ domain ของ server ใส่ domain ของ loadBalance ไปด้วย
-# หรือก็คือ เครื่องพวกนี้ต้องใส่ไปใน /etc/hosts (ถ้ามีจดใน DNS ก็หายห่วงแต่ต้องทำเพื่อ)
-hosts_file: 
-  - "192.168.101.11 master-a"
-  - "192.168.101.12 master-b"
-  - "192.168.101.13 worker-a"
-  - "192.168.101.17 vip"
+# Pre-install-kube role specific variables
+# Most variables are now in group_vars/all.yml
 
-admin: boostrap # User admin
+# No role-specific variables needed - all variables are in group_vars

@@ -1,9 +1,4 @@
-admin: boostrap # User admin ที่ลูกค้าให้มา
+# Join-master role specific variables
+# Most variables are now in group_vars/all.yml
 
-home_admin: /home/boostrap
-
-# Load balancer endpoint for joining master nodes
-endpoint_lb: "192.168.101.17"
-
-# Control plane port for load balancer
-control_plane_port: "8443"
+# No role-specific variables needed - all variables are in group_vars

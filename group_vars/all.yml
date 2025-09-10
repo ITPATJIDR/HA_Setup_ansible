@@ -1,11 +1,44 @@
+# =============================================================================
+# Kubernetes High Availability Cluster Configuration
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Network Configuration
+# -----------------------------------------------------------------------------
+vip_address: "192.168.101.17/24"
+endpoint_lb: "{{ vip_address.split('/')[0] }}"  # Extract IP from VIP address
+apiserver_port: 6443
+control_plane_port: 8443
+
+# Pod and Service Subnets
+pod_subnet: "10.128.0.0/16"
+svc_subnet: "10.129.0.0/16"
+
+# -----------------------------------------------------------------------------
+# Host Configuration
+# -----------------------------------------------------------------------------
 hosts_file: 
   - "192.168.101.11 master-a"
   - "192.168.101.12 master-b"
   - "192.168.101.13 worker-a"
   - "192.168.101.17 vip"
 
-admin: boostrap # User admin
+# User Configuration
+admin: boostrap
+home_admin: "/home/boostrap"
 
-vip_address: "192.168.101.17/24"
-apiserver_port: 6443
-control_plane_port: 8443
+# -----------------------------------------------------------------------------
+# Kubernetes Version Configuration
+# -----------------------------------------------------------------------------
+kube_minior: 1.31  # Minor version (no patch)
+kube_version: 1.31.0  # Full version with patch
+
+# -----------------------------------------------------------------------------
+# HAProxy/Keepalived Configuration
+# -----------------------------------------------------------------------------
+master_nodes: "{{ hosts_file | select('match', '.*master.*') | list }}"
+
+# -----------------------------------------------------------------------------
+# Calico Configuration
+# -----------------------------------------------------------------------------
+# Calico uses the same pod_subnet defined above

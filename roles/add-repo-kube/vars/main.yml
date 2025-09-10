@@ -1,5 +1,4 @@
-# ไม่ต้องใส่ patch (ทศนิยมหลัง)
-kube_minior: 1.31
+# Add-repo-kube role specific variables
+# Most variables are now in group_vars/all.yml
 
-# ใส่ครบทั้ง 3 ทศนิยม
-kube_version: 1.31.0
+# No role-specific variables needed - all variables are in group_vars
