@@ -1,5 +1,5 @@
 ---
-- name: "Reset any existing Kubernetes installation on master nodes"
+- name: "Reset any existing Kubernetes installation on worker nodes"
   ansible.builtin.shell: |
     kubeadm reset -f
     rm -rf /etc/kubernetes/pki /etc/kubernetes/manifests /var/lib/etcd
@@ -10,9 +10,6 @@
 - name: "Join Worker node"
   ansible.builtin.shell: |
     kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} \
-      --token {{ hostvars[item]['join_token'] }} \
-      --discovery-token-ca-cert-hash {{ hostvars[item]['discovery_token_ca_cert_hash'] }}
-  loop: "{{ groups['boostrap-node'] }}"
-  vars:
-    endpoint_lb: "{{ hostvars[groups['boostrap-node'][0]]['endpoint_lb'] }}"
-    control_plane_port: "{{ hostvars[groups['boostrap-node'][0]]['control_plane_port'] }}"
+      --token {{ hostvars[groups['boostrap-node'][0]]['join_token'] }} \
+      --discovery-token-ca-cert-hash {{ hostvars[groups['boostrap-node'][0]]['discovery_token_ca_cert_hash'] }}
+  loop: "{{ groups['k8s-worker'] }}"
