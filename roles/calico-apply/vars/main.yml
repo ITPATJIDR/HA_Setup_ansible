@@ -2,4 +2,4 @@
 pod_subnet: "10.128.0.0/16" 
 
 # ไม่ต้องใส่ / ตามหลังปิดท้าย (ให้ใส่เป็นที่อยู่ของ home user ที่ได้รับมาเช่น Ksec ให้ user root ก็เปลี่ยนเป็น /root แทน)
-home_admin: /home/kubeadmin 
+home_admin: /home/boostrap

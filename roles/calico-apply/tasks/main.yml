@@ -9,7 +9,7 @@
 - name: "Apply Tigera Operator"
   ansible.builtin.k8s:
     state: present
-    definition: "{{ tigera_operator.json }}"
+    definition: "{{ tigera_operator.content }}"
 
 - name: "Create Calico Installation"
   ansible.builtin.k8s:
