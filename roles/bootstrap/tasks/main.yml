@@ -81,7 +81,7 @@
 
   - name: "Set key variable for join master node"
     ansible.builtin.set_fact:
-      certficate_key: "{{ init_output.stdout_lines[39] }}"
+      certificate_key: "{{ init_output.stdout_lines[39] }}"
 
   - name: "Create join token for master nodes"
     ansible.builtin.shell: kubeadm token create --print-join-command
@@ -97,7 +97,7 @@
 
   - name: "Display join command for master nodes"
     ansible.builtin.debug:
-      msg: "To join master nodes, use this command: kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} --token {{ join_token }} --discovery-token-ca-cert-hash {{ discovery_token_ca_cert_hash }} --control-plane --certificate-key {{ certficate_key }}"
+      msg: "To join master nodes, use this command: kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} --token {{ join_token }} --discovery-token-ca-cert-hash {{ discovery_token_ca_cert_hash }} --control-plane --certificate-key {{ certificate_key }}"
 
   - name: "Display join command for worker nodes"
     ansible.builtin.shell: "kubeadm token create --print-join-command"

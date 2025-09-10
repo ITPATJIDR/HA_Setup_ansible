@@ -5,11 +5,8 @@
       --token {{ hostvars[item]['join_token'] }} \
       --discovery-token-ca-cert-hash {{ hostvars[item]['discovery_token_ca_cert_hash'] }} \
       --control-plane \
-      --certificate-key {{ hostvars[item]['certficate_key'] }}
+      --certificate-key {{ hostvars[item]['certificate_key'] }}
   loop: "{{ groups['boostrap-node'] }}"
-  vars:
-    endpoint_lb: "{{ hostvars[groups['boostrap-node'][0]]['endpoint_lb'] }}"
-    control_plane_port: "{{ hostvars[groups['boostrap-node'][0]]['control_plane_port'] }}"
 
 - name: "Create Directory kubeconfig"
   ansible.builtin.file:
