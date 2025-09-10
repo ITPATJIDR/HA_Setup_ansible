@@ -1,4 +1,12 @@
 ---
+  - name: "Create bootstrap user if it doesn't exist"
+    ansible.builtin.user:
+      name: "{{ admin }}"
+      state: present
+      shell: /bin/bash
+      create_home: yes
+      home: "{{ home_admin }}"
+
   - name: "Check if Kubernetes is already initialized"
     ansible.builtin.stat:
       path: /etc/kubernetes/admin.conf
