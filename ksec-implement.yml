@@ -20,7 +20,7 @@
   hosts: boostrap-node #[boostrap-node] ตรง host.ini
   become: yes
   roles:
-    - bootstrap-node
+    - bootstrap
     - calico-apply
 
 
