@@ -24,11 +24,11 @@
     - calico-apply
 
 
-# - name: Join Master Node
-#   hosts: k8s-master #[k8s-master] ตรง host.ini
-#   become: yes
-#   roles:
-#     - join-master
+- name: Join Master Node
+  hosts: k8s-master #[k8s-master] ตรง host.ini
+  become: yes
+  roles:
+    - join-master
 
 
 # - name: Join Worker Node
