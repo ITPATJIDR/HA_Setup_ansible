@@ -31,11 +31,11 @@
     - join-master
 
 
-# - name: Join Worker Node
-#   hosts: k8s-worker #[k8s-worker] ตรง host.ini
-#   become: yes
-#   roles:
-#     - join-worker
+- name: Join Worker Node
+  hosts: k8s-worker #[k8s-worker] ตรง host.ini
+  become: yes
+  roles:
+    - join-worker
 
 
 # - name: Set Label Worker Node
