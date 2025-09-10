@@ -10,6 +10,6 @@ admin: boostrap # User admin ที่ลูกค้าให้มา
 
 home_admin: /home/boostrap # ไม่ต้องใส่ / ตามหลังปิดท้าย
 
-endpoint_lb: vip # ชื่อของ Loadbalance ใส่เป็น IP ไม่ได้
+endpoint_lb: "{{ vip_address.split('/')[0] }}" # VIP IP address for load balancer endpoint
 
 control_plane_port: 8443 # Port for control plane endpoint

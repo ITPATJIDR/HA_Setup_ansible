@@ -2,10 +2,10 @@
 - name: "Join master node"
   ansible.builtin.shell: |
     kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} \
-      --token {{ hostvars[item]['join_token'] }} \
-      --discovery-token-ca-cert-hash {{ hostvars[item]['discovery_token_ca_cert_hash'] }} \
+      --token {{ hostvars[groups['boostrap-node'][0]]['join_token'] }} \
+      --discovery-token-ca-cert-hash {{ hostvars[groups['boostrap-node'][0]]['discovery_token_ca_cert_hash'] }} \
       --control-plane \
-      --certificate-key {{ hostvars[item]['certificate_key'] }}
+      --certificate-key {{ hostvars[groups['boostrap-node'][0]]['certificate_key'] }}
   loop: "{{ groups['k8s-master'] }}"
 
 - name: "Create Directory kubeconfig"
