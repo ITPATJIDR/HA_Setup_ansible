@@ -1,4 +1,12 @@
 ---
+- name: "Reset any existing Kubernetes installation on master nodes"
+  ansible.builtin.shell: |
+    kubeadm reset -f
+    rm -rf /etc/kubernetes/pki /etc/kubernetes/manifests /var/lib/etcd
+    systemctl restart containerd
+  loop: "{{ groups['k8s-master'] }}"
+  ignore_errors: true
+
 - name: "Join master node"
   ansible.builtin.shell: |
     kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} \

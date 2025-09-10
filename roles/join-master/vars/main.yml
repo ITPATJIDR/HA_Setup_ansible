@@ -3,7 +3,7 @@ admin: boostrap # User admin ที่ลูกค้าให้มา
 home_admin: /home/boostrap
 
 # Load balancer endpoint for joining master nodes
-endpoint_lb: "vip"
+endpoint_lb: "192.168.101.17"
 
 # Control plane port for load balancer
 control_plane_port: "8443"
