@@ -47,19 +47,35 @@
     group: root
     recurse: yes  # ใช้ถ้าอยากให้ไฟล์ทั้งหมดในโฟลเดอร์เปลี่ยน owner ด้วย
 
+- name: "Create .bash_profile for admin user if it doesn't exist"
+  ansible.builtin.file:
+    path: "{{ home_admin }}/.bash_profile"
+    state: touch
+    owner: "{{ admin }}"
+    group: "{{ admin }}"
+    mode: '0644'
+
+- name: "Create .bash_profile for root user if it doesn't exist"
+  ansible.builtin.file:
+    path: "/root/.bash_profile"
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: "Set Environment KUBECONFIG admin"
   ansible.builtin.lineinfile:
     path: "{{ home_admin }}/.bash_profile"
     line: "export KUBECONFIG={{ home_admin }}/.kube/config"
     state: present
-    insertbefore: EOF 
+    create: yes
 
 - name: "Set Environment KUBECONFIG root"
   ansible.builtin.lineinfile:
     path: "/root/.bash_profile"
     line: "export KUBECONFIG=/etc/kubernetes/admin.conf"
     state: present
-    insertbefore: EOF 
+    create: yes
 
 - name: "Approve kubelet-serving CSRs"
   ansible.builtin.shell: |
