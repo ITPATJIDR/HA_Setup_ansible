@@ -3,7 +3,7 @@ admin: boostrap # User admin ที่ลูกค้าให้มา
 home_admin: /home/boostrap
 
 # Load balancer endpoint for joining master nodes
-endpoint_lb: "{{ vip_address.split('/')[0] }}"
+endpoint_lb: "vip"
 
 # Control plane port for load balancer
 control_plane_port: "{{ control_plane_port | default(8443) }}"
