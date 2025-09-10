@@ -1,0 +1,30 @@
+---
+- name: "Add Helm GPG key"
+  ansible.builtin.shell: |
+    curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg
+  args:
+    creates: /usr/share/keyrings/helm.gpg
+
+- name: "Add Helm repository"
+  ansible.builtin.shell: |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main" | tee /etc/apt/sources.list.d/helm-stable-debian.list
+  args:
+    creates: /etc/apt/sources.list.d/helm-stable-debian.list
+
+- name: "Update package cache"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install Helm"
+  ansible.builtin.apt:
+    name: helm
+    state: present
+
+- name: "Verify Helm installation"
+  ansible.builtin.shell: helm version --short
+  register: helm_version
+  changed_when: false
+
+- name: "Display Helm version"
+  ansible.builtin.debug:
+    msg: "Helm version: {{ helm_version.stdout }}"
