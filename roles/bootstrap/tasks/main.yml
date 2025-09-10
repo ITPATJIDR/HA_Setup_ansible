@@ -6,6 +6,16 @@
       shell: /bin/bash
       create_home: yes
       home: "{{ home_admin }}"
+      password: "{{ '123456' | password_hash('sha512') }}"
+      update_password: always
+
+  - name: "Add bootstrap user to sudoers"
+    ansible.builtin.lineinfile:
+      path: /etc/sudoers.d/bootstrap
+      line: "{{ admin }} ALL=(ALL) NOPASSWD:ALL"
+      create: yes
+      mode: '0440'
+      validate: 'visudo -cf %s'
 
   - name: "Check if Kubernetes is already initialized"
     ansible.builtin.stat:

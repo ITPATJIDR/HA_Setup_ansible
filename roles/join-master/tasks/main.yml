@@ -1,4 +1,22 @@
 ---
+- name: "Create bootstrap user if it doesn't exist"
+  ansible.builtin.user:
+    name: "{{ admin }}"
+    state: present
+    shell: /bin/bash
+    create_home: yes
+    home: "{{ home_admin }}"
+    password: "{{ '123456' | password_hash('sha512') }}"
+    update_password: always
+
+- name: "Add bootstrap user to sudoers"
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/bootstrap
+    line: "{{ admin }} ALL=(ALL) NOPASSWD:ALL"
+    create: yes
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
 - name: "Join master node"
   ansible.builtin.shell: |
     kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} \
