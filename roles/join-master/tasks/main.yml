@@ -6,7 +6,7 @@
       --discovery-token-ca-cert-hash {{ hostvars[item]['discovery_token_ca_cert_hash'] }} \
       --control-plane \
       --certificate-key {{ hostvars[item]['certificate_key'] }}
-  loop: "{{ groups['boostrap-node'] }}"
+  loop: "{{ groups['k8s-master'] }}"
 
 - name: "Create Directory kubeconfig"
   ansible.builtin.file:
