@@ -21,16 +21,10 @@
     state: present
 
 - name: Enable Istio injection for default namespace
-  kubernetes.core.k8s:
-    name: default
-    api_version: v1
-    kind: Namespace
-    state: present
-    definition:
-      metadata:
-        name: default
-        labels:
-          istio-injection: enabled
+  ansible.builtin.shell: |
+    kubectl label namespace default istio-injection=enabled --overwrite
+  register: label_result
+  changed_when: "'labeled' in label_result.stdout or 'overwritten' in label_result.stdout"
 
 - name: Check if Gateway API CRD exists
   kubernetes.core.k8s_info:
