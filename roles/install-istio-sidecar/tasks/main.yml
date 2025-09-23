@@ -6,19 +6,16 @@
     force: yes
 
 - name: Install istio-base using Helm
-  kubernetes.core.helm:
-    name: istio-base
-    chart_ref: /tmp/istio/manifests/charts/base
-    release_namespace: istio-system
-    create_namespace: yes
-    state: present
+  ansible.builtin.shell: |
+    helm upgrade --install istio-base /tmp/istio/manifests/charts/base -n istio-system --create-namespace
+  args:
+    warn: false
 
 - name: Install istiod using Helm
-  kubernetes.core.helm:
-    name: istiod
-    chart_ref: /tmp/istio/manifests/charts/istio-control/istio-discovery
-    release_namespace: istio-system
-    state: present
+  ansible.builtin.shell: |
+    helm upgrade --install istiod /tmp/istio/manifests/charts/istio-control/istio-discovery -n istio-system
+  args:
+    warn: false
 
 - name: Enable Istio injection for default namespace
   ansible.builtin.shell: |
@@ -27,49 +24,47 @@
   changed_when: "'labeled' in label_result.stdout or 'overwritten' in label_result.stdout"
 
 - name: Check if Gateway API CRD exists
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: gateways.gateway.networking.k8s.io
-  register: gateway_crd
-  ignore_errors: yes
+  ansible.builtin.shell: |
+    kubectl get crd gateways.gateway.networking.k8s.io
+  register: gateway_crd_check
+  changed_when: false
+  failed_when: false
 
 - name: Install Gateway API CRDs
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('url', 'https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/config/crd/v1.3.0/standard/gateway.networking.k8s.io_gateways.yaml', wantlist=True) }}"
-  when: gateway_crd.resources | length == 0
+  ansible.builtin.shell: |
+    kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.3.0" | kubectl apply -f -
+  when: gateway_crd_check.rc != 0
 
 - name: Deploy Bookinfo sample application
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('url', 'https://raw.githubusercontent.com/istio/istio/release-1.27/samples/bookinfo/platform/kube/bookinfo.yaml', wantlist=True) }}"
+  ansible.builtin.shell: |
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.27/samples/bookinfo/platform/kube/bookinfo.yaml
+  args:
+    warn: false
 
 - name: Get services and pods
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Service
-  register: services
+  ansible.builtin.shell: |
+    kubectl get services,pods -n default
+  register: svc_pod_list
+  changed_when: false
+  failed_when: false
 
-- name: Get pods
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Pod
-  register: pods
+- name: Get ratings pod name
+  ansible.builtin.shell: |
+    kubectl get pod -l app=ratings -n default -o jsonpath='{.items[0].metadata.name}'
+  register: ratings_pod
+  changed_when: false
+  failed_when: ratings_pod.stdout == ""
 
 - name: Display services and pods
   ansible.builtin.debug:
-    msg: "Services: {{ services.resources | map(attribute='metadata.name') | list }}, Pods: {{ pods.resources | map(attribute='metadata.name') | list }}"
+    msg: "\n{{ svc_pod_list.stdout }}"
 
 - name: Test Bookinfo application
-  kubernetes.core.k8s_exec:
-    namespace: default
-    pod: "{{ item.metadata.name }}"
-    container: ratings
-    command: curl -sS productpage:9080/productpage
-  loop: "{{ pods.resources | selectattr('metadata.labels.app', 'equalto', 'ratings') | list }}"
+  ansible.builtin.shell: |
+    kubectl exec "{{ ratings_pod.stdout }}" -n default -c ratings -- curl -sS productpage:9080/productpage | grep -o "<title>.*</title>"
   register: curl_result
-  ignore_errors: yes
+  changed_when: false
+  failed_when: false
 
 - name: Display curl result
   ansible.builtin.debug:
@@ -77,31 +72,25 @@
   when: curl_result.stdout is defined
 
 - name: Deploy Bookinfo Gateway
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('url', 'https://raw.githubusercontent.com/istio/istio/release-1.27/samples/bookinfo/gateway-api/bookinfo-gateway.yaml', wantlist=True) }}"
+  ansible.builtin.shell: |
+    kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.27/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
+  args:
+    warn: false
 
 - name: Annotate Gateway with NodePort service type
-  kubernetes.core.k8s:
-    name: bookinfo-gateway
-    namespace: default
-    api_version: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    state: present
-    definition:
-      metadata:
-        name: bookinfo-gateway
-        namespace: default
-        annotations:
-          networking.istio.io/service-type: NodePort
-      spec: {}
+  ansible.builtin.shell: |
+    kubectl annotate gateway bookinfo-gateway networking.istio.io/service-type=NodePort -n default --overwrite
+  register: annotate_out
+  changed_when: "'annotated' in annotate_out.stdout or 'configured' in annotate_out.stdout"
+  failed_when: false
 
 - name: Get Gateway information
-  kubernetes.core.k8s_info:
-    api_version: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-  register: gateways
+  ansible.builtin.shell: |
+    kubectl get gateway -n default -o wide
+  register: gateways_out
+  changed_when: false
+  failed_when: false
 
 - name: Display Gateway information
   ansible.builtin.debug:
-    msg: "Gateways: {{ gateways.resources | map(attribute='metadata.name') | list }}"
+    msg: "\n{{ gateways_out.stdout }}"
