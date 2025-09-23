@@ -38,6 +38,11 @@
   roles:
     - join-worker
 
+- name: Install Istio Sidecar
+  hosts: boostrap-node
+  become: yes
+  roles:
+    - install-istio-sidecar
 
 # - name: Set Label Worker Node
 #   hosts: boostrap-node
