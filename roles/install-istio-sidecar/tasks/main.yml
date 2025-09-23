@@ -42,12 +42,27 @@
   changed_when: false
   failed_when: false
 
+- name: Wait for ratings pods to be created
+  ansible.builtin.shell: |
+    kubectl get pod -l app=ratings -n default -o jsonpath='{.items[*].metadata.name}'
+  register: ratings_pods
+  changed_when: false
+  retries: 30
+  delay: 10
+  until: ratings_pods.stdout != ""
+
+- name: Wait for ratings pod to be Ready
+  ansible.builtin.shell: |
+    kubectl wait --for=condition=ready pod -l app=ratings -n default --timeout=300s
+  register: ratings_ready
+  changed_when: "'condition met' in ratings_ready.stdout"
+  failed_when: false
+
 - name: Get ratings pod name
   ansible.builtin.shell: |
     kubectl get pod -l app=ratings -n default -o jsonpath='{.items[0].metadata.name}'
   register: ratings_pod
   changed_when: false
-  failed_when: ratings_pod.stdout == ""
 
 - name: Display services and pods
   ansible.builtin.debug:
