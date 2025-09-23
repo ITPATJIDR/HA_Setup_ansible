@@ -8,14 +8,10 @@
 - name: Install istio-base using Helm
   ansible.builtin.shell: |
     helm upgrade --install istio-base /tmp/istio/manifests/charts/base -n istio-system --create-namespace
-  args:
-    warn: false
 
 - name: Install istiod using Helm
   ansible.builtin.shell: |
     helm upgrade --install istiod /tmp/istio/manifests/charts/istio-control/istio-discovery -n istio-system
-  args:
-    warn: false
 
 - name: Enable Istio injection for default namespace
   ansible.builtin.shell: |
@@ -38,8 +34,6 @@
 - name: Deploy Bookinfo sample application
   ansible.builtin.shell: |
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.27/samples/bookinfo/platform/kube/bookinfo.yaml
-  args:
-    warn: false
 
 - name: Get services and pods
   ansible.builtin.shell: |
@@ -74,8 +68,6 @@
 - name: Deploy Bookinfo Gateway
   ansible.builtin.shell: |
     kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.27/samples/bookinfo/gateway-api/bookinfo-gateway.yaml
-  args:
-    warn: false
 
 - name: Annotate Gateway with NodePort service type
   ansible.builtin.shell: |
