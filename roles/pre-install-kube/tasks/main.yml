@@ -74,6 +74,13 @@
 - name: "Load Kernel Parameters"
   ansible.builtin.command: sysctl --system
 
+- name: "Remove Containerd Config"
+  ansible.builtin.apt:
+    name: containerd
+    state: absent
+    update_cache: yes
+  ignore_errors: true
+
 - name: "Install Docker"
   ansible.builtin.apt:
     name: docker.io
