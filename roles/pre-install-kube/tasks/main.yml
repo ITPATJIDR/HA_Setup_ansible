@@ -74,6 +74,35 @@
 - name: "Load Kernel Parameters"
   ansible.builtin.command: sysctl --system
 
+
+- name: "Stop containerd service if running"
+  ansible.builtin.systemd:
+    name: containerd
+    state: stopped
+    enabled: no
+  ignore_errors: true
+
+- name: "Remove containerd and related packages"
+  ansible.builtin.apt:
+    name:
+      - containerd
+      - containerd.io
+      - cri-tools
+    state: absent
+    purge: yes
+    autoremove: yes
+  ignore_errors: true
+
+- name: "Clean up containerd directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/containerd
+    - /var/lib/containerd
+    - /var/run/containerd
+  ignore_errors: true
+
 - name: "Remove Containerd Config"
   ansible.builtin.apt:
     name: containerd
