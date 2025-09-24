@@ -1,0 +1,6 @@
+---
+- name: Install Jenkins on Jenkins Node
+  hosts: jenkins-node
+  become: yes
+  roles:
+    - install-jenkins

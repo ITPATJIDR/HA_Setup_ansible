@@ -44,6 +44,7 @@
   roles:
     - install-istio-sidecar
 
+
 # - name: Set Label Worker Node
 #   hosts: boostrap-node
 #   tasks:

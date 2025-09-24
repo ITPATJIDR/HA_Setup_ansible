@@ -1,0 +1,83 @@
+---
+- name: "Update package cache"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install required packages for Jenkins"
+  ansible.builtin.apt:
+    name:
+      - openjdk-11-jdk
+      - wget
+      - gnupg
+      - software-properties-common
+    state: present
+
+- name: "Add Jenkins GPG key"
+  ansible.builtin.shell: |
+    wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | apt-key add -
+  args:
+    creates: /etc/apt/trusted.gpg.d/jenkins.gpg
+
+- name: "Add Jenkins repository"
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    content: "deb https://pkg.jenkins.io/debian-stable binary/"
+    mode: '0644'
+
+- name: "Update package cache after adding Jenkins repo"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install Jenkins"
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+
+- name: "Start and enable Jenkins service"
+  ansible.builtin.systemd:
+    name: jenkins
+    enabled: yes
+    state: started
+
+- name: "Wait for Jenkins to start"
+  ansible.builtin.wait_for:
+    port: 8080
+    host: "{{ ansible_default_ipv4.address }}"
+    delay: 10
+    timeout: 60
+
+- name: "Get Jenkins initial admin password"
+  ansible.builtin.shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_password
+  changed_when: false
+
+- name: "Display Jenkins initial admin password"
+  ansible.builtin.debug:
+    msg: "Jenkins initial admin password: {{ jenkins_password.stdout }}"
+
+- name: "Display Jenkins access information"
+  ansible.builtin.debug:
+    msg: |
+      Jenkins is now running on: http://{{ ansible_default_ipv4.address }}:8080
+      Initial admin password: {{ jenkins_password.stdout }}
+      Please complete the setup wizard in your browser.
+
+- name: "Install additional useful packages for Jenkins"
+  ansible.builtin.apt:
+    name:
+      - git
+      - curl
+      - unzip
+      - docker.io
+    state: present
+
+- name: "Add jenkins user to docker group"
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: yes
+
+- name: "Restart Jenkins to apply docker group changes"
+  ansible.builtin.systemd:
+    name: jenkins
+    state: restarted 
