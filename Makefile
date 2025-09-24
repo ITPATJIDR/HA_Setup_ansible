@@ -12,3 +12,6 @@ install-vault:
 
 delete-istio:
 	ansible-playbook -i hosts.ini delete-istio.yml --ask-become-pass 
+
+install-istio:
+	ansible-playbook -i hosts.ini install-istio.yml --ask-become-pass 
