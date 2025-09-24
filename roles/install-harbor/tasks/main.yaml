@@ -64,6 +64,7 @@
   ansible.builtin.copy:
     src: /opt/harbor/harbor/harbor.yml.tmpl
     dest: /opt/harbor/harbor/harbor.yml
+    remote_src: yes
     mode: '0644'
 
 - name: "Update Harbor configuration with custom settings"
