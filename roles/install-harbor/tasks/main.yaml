@@ -60,6 +60,36 @@
     mode: '0755'
     recurse: yes
 
+- name: "Copy Harbor configuration template"
+  ansible.builtin.copy:
+    src: /opt/harbor/harbor/harbor.yml.tmpl
+    dest: /opt/harbor/harbor/harbor.yml
+    mode: '0644'
+
+- name: "Update Harbor configuration with custom settings"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^hostname: reg.mydomain.com'
+    replace: 'hostname: {{ ansible_default_ipv4.address }}'
+
+- name: "Update Harbor admin password"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^harbor_admin_password: Harbor12345'
+    replace: 'harbor_admin_password: Harbor12345'
+
+- name: "Update Harbor database password"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^  password: root123'
+    replace: '  password: root123'
+
+- name: "Update Harbor data volume path"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^data_volume: /data'
+    replace: 'data_volume: /data/harbor'
+
 - name: "Install Harbor"
   ansible.builtin.shell: |
     cd /opt/harbor/harbor
