@@ -1,6 +1,6 @@
 ---
 - name: Install Harbor Container Registry
-  hosts: all
+  hosts: harbor-node
   become: yes
   roles:
     - install-harbor
