@@ -1,0 +1,6 @@
+---
+- name: Install Jenkins on Jenkins Node
+  hosts: harbor-node
+  become: yes
+  roles:
+    - install-harbor
