@@ -70,7 +70,7 @@
 - name: "Install Harbor"
   ansible.builtin.shell: |
     cd {{ harbor_install_dir }}/harbor
-    ./install.sh
+    ./install.sh --with-trivy
   args:
     creates: "{{ harbor_install_dir }}/harbor/docker-compose.yml"
   register: harbor_install_result
