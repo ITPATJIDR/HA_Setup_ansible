@@ -6,7 +6,7 @@
 - name: "Install required packages for Jenkins"
   ansible.builtin.apt:
     name:
-      - openjdk-11-jdk
+      - openjdk-17-jdk
       - wget
       - gnupg
       - software-properties-common
