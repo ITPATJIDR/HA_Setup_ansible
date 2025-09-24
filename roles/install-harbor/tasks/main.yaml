@@ -215,3 +215,34 @@
       echo "Backup completed: $BACKUP_DIR/harbor-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
     dest: /usr/local/bin/harbor-backup
     mode: '0755'
+
+- name: "Create systemd unit for Harbor"
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/harbor.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Harbor Container Registry
+      Requires=docker.service
+      After=docker.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      WorkingDirectory=/opt/harbor/harbor
+      ExecStart=/usr/bin/docker-compose -f docker-compose.yml up -d
+      ExecStop=/usr/bin/docker-compose -f docker-compose.yml down
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: "Reload systemd to pick up harbor.service"
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: "Enable and start Harbor service"
+  ansible.builtin.systemd:
+    name: harbor
+    enabled: yes
+    state: started
