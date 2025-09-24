@@ -64,7 +64,6 @@
   ansible.builtin.copy:
     src: /opt/harbor/harbor/harbor.yml.tmpl
     dest: /opt/harbor/harbor/harbor.yml
-    remote_src: yes
     mode: '0644'
 
 - name: "Update Harbor configuration with custom settings"
@@ -91,6 +90,30 @@
     regexp: '^data_volume: /data'
     replace: 'data_volume: /data/harbor'
 
+- name: "Disable HTTPS in Harbor configuration"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^https:'
+    replace: '# https:'
+
+- name: "Comment out HTTPS certificate settings"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^  port: 443'
+    replace: '  # port: 443'
+
+- name: "Comment out HTTPS certificate path"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^  certificate:'
+    replace: '  # certificate:'
+
+- name: "Comment out HTTPS private key path"
+  ansible.builtin.replace:
+    path: /opt/harbor/harbor/harbor.yml
+    regexp: '^  private_key:'
+    replace: '  # private_key:'
+
 - name: "Install Harbor"
   ansible.builtin.shell: |
     cd /opt/harbor/harbor
@@ -112,12 +135,6 @@
     port: 80
     proto: tcp
 
-- name: "Configure firewall for Harbor HTTPS"
-  ansible.builtin.ufw:
-    rule: allow
-    port: 443
-    proto: tcp
-
 - name: "Get Harbor admin password"
   ansible.builtin.shell: |
     if [ -f "/opt/harbor/harbor/harbor.yml" ]; then
@@ -133,7 +150,6 @@
     msg: |
       Harbor is now running on:
       HTTP:  http://{{ ansible_default_ipv4.address }}:80
-      HTTPS: https://{{ ansible_default_ipv4.address }}:443
       Default admin credentials:
       Username: admin
       Password: {{ harbor_admin_password.stdout }}
