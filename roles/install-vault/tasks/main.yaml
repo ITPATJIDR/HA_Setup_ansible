@@ -1,0 +1,115 @@
+---
+- name: "Update package cache"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install prerequisites"
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - lsb-release
+      - ufw
+    state: present
+
+- name: "Add HashiCorp GPG key"
+  ansible.builtin.shell: |
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+- name: "Add HashiCorp apt repository"
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/hashicorp.list
+    mode: '0644'
+    content: |
+      deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main
+
+- name: "Update package cache (HashiCorp repo)"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install Vault"
+  ansible.builtin.apt:
+    name: vault
+    state: present
+
+- name: "Ensure vault user and group exist"
+  ansible.builtin.user:
+    name: vault
+    system: yes
+    shell: /usr/sbin/nologin
+    create_home: no
+    state: present
+
+- name: "Create Vault data directory"
+  ansible.builtin.file:
+    path: /opt/vault/data
+    state: directory
+    owner: vault
+    group: vault
+    mode: '0750'
+    recurse: yes
+
+- name: "Create Vault configuration directory"
+  ansible.builtin.file:
+    path: /etc/vault.d
+    state: directory
+    owner: vault
+    group: vault
+    mode: '0750'
+
+- name: "Write Vault configuration (raft, http listener, ui)"
+  ansible.builtin.copy:
+    dest: /etc/vault.d/vault.hcl
+    owner: vault
+    group: vault
+    mode: '0644'
+    content: |
+      ui = true
+      disable_mlock = true
+
+      api_addr    = "http://{{ ansible_default_ipv4.address }}:8200"
+      cluster_addr = "http://{{ ansible_default_ipv4.address }}:8201"
+
+      storage "raft" {
+        path    = "/opt/vault/data"
+        node_id = "vault-node-1"
+      }
+
+      listener "tcp" {
+        address     = "0.0.0.0:8200"
+        tls_disable = "true"
+      }
+
+- name: "Open firewall for Vault HTTP"
+  ansible.builtin.ufw:
+    rule: allow
+    port: 8200
+    proto: tcp
+
+- name: "Enable and start Vault service"
+  ansible.builtin.systemd:
+    name: vault
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: "Wait for Vault API to be reachable"
+  ansible.builtin.wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: 8200
+    delay: 5
+    timeout: 120
+
+- name: "Display Vault access information"
+  ansible.builtin.debug:
+    msg: |
+      Vault is installed and running.
+      API:  http://{{ ansible_default_ipv4.address }}:8200
+      UI:   http://{{ ansible_default_ipv4.address }}:8200/ui
+      Next steps (run on the Vault host):
+        export VAULT_ADDR=http://{{ ansible_default_ipv4.address }}:8200
+        vault operator init -key-shares=1 -key-threshold=1
+        vault operator unseal <Unseal_Key>
+        export VAULT_TOKEN=<Root_Token>

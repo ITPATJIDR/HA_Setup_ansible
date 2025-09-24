@@ -1,0 +1,7 @@
+---
+- name: Install HashiCorp Vault
+  hosts: vault-node
+  become: yes
+  roles:
+    - install-vault
+
