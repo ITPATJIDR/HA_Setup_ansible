@@ -7,3 +7,6 @@ install-jenkins:
 install-harbor:
 	ansible-playbook -i hosts.ini harbor-install.yml --ask-become-pass 
 
+install-vault:
+	ansible-playbook -i hosts.ini vault-install.yml --ask-become-pass 
+
