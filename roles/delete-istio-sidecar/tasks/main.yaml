@@ -1,0 +1,68 @@
+---
+- name: "Check if kubectl is available"
+  ansible.builtin.command: kubectl version --client
+  register: kubectl_check
+  failed_when: false
+  changed_when: false
+
+- name: "Check if helm is available"
+  ansible.builtin.command: helm version
+  register: helm_check
+  failed_when: false
+  changed_when: false
+
+- name: "Delete Istio ingress gateway"
+  ansible.builtin.shell: |
+    helm delete istio-ingress -n istio-ingress
+  register: delete_ingress_result
+  failed_when: false
+  changed_when: delete_ingress_result.rc == 0
+
+- name: "Delete istio-ingress namespace"
+  ansible.builtin.shell: |
+    kubectl delete namespace istio-ingress
+  register: delete_ingress_ns_result
+  failed_when: false
+  changed_when: delete_ingress_ns_result.rc == 0
+
+- name: "Delete Istio control plane (istiod)"
+  ansible.builtin.shell: |
+    helm delete istiod -n istio-system
+  register: delete_istiod_result
+  failed_when: false
+  changed_when: delete_istiod_result.rc == 0
+
+- name: "Delete Istio base"
+  ansible.builtin.shell: |
+    helm delete istio-base -n istio-system
+  register: delete_base_result
+  failed_when: false
+  changed_when: delete_base_result.rc == 0
+
+- name: "Delete istio-system namespace"
+  ansible.builtin.shell: |
+    kubectl delete namespace istio-system
+  register: delete_system_ns_result
+  failed_when: false
+  changed_when: delete_system_ns_result.rc == 0
+
+- name: "Wait for namespaces to be deleted"
+  ansible.builtin.shell: |
+    kubectl get namespace istio-system istio-ingress 2>/dev/null || true
+  register: namespace_check
+  until: "'istio-system' not in namespace_check.stdout and 'istio-ingress' not in namespace_check.stdout"
+  retries: 30
+  delay: 10
+  failed_when: false
+
+- name: "Display deletion results"
+  ansible.builtin.debug:
+    msg: |
+      Istio deletion completed:
+      - Istio ingress gateway: {{ 'Deleted' if delete_ingress_result.rc == 0 else 'Not found or already deleted' }}
+      - istio-ingress namespace: {{ 'Deleted' if delete_ingress_ns_result.rc == 0 else 'Not found or already deleted' }}
+      - Istio control plane (istiod): {{ 'Deleted' if delete_istiod_result.rc == 0 else 'Not found or already deleted' }}
+      - Istio base: {{ 'Deleted' if delete_base_result.rc == 0 else 'Not found or already deleted' }}
+      - istio-system namespace: {{ 'Deleted' if delete_system_ns_result.rc == 0 else 'Not found or already deleted' }}
+      
+      All Istio components have been removed from the cluster. 

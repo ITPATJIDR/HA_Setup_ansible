@@ -1,0 +1,6 @@
+---
+- name: Delete Istio Service Mesh
+  hosts: boostrap-node
+  become: yes
+  roles:
+    - delete-istio-sidecar

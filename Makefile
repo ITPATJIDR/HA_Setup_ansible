@@ -10,3 +10,5 @@ install-harbor:
 install-vault:
 	ansible-playbook -i hosts.ini vault-install.yml --ask-become-pass 
 
+delete-istio:
+	ansible-playbook -i hosts.ini delete-istio.yml --ask-become-pass 
