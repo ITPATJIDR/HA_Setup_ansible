@@ -3,7 +3,7 @@
 
 ---
 - name: Pre-install Kubernetes
-  hosts: all
+  hosts: boostrap-node,k8s-master, k8s-worker
   become: yes
   roles:
     - pre-install-kube
