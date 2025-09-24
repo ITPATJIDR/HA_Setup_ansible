@@ -7,6 +7,14 @@
   loop: "{{ groups['k8s-worker'] }}"
   ignore_errors: true
 
+- name: "Create /etc/kubernetes/manifests directory on worker nodes"
+  ansible.builtin.file:
+    path: /etc/kubernetes/manifests
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
 - name: "Join Worker node"
   ansible.builtin.shell: |
     kubeadm join {{ endpoint_lb }}:{{ control_plane_port }} \
