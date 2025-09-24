@@ -29,21 +29,21 @@
 
 - name: "Create Harbor installation directory"
   ansible.builtin.file:
-    path: ./harbor
+    path: /opt/harbor
     state: directory
     mode: '0755'
 
 - name: "Download Harbor offline installer"
   ansible.builtin.get_url:
     url: "https://github.com/goharbor/harbor/releases/download/v2.10.0/harbor-offline-installer-v2.10.0.tgz"
-    dest: .harbor/harbor-offline-installer-v2.10.0.tgz
+    dest: /opt/harbor/harbor-offline-installer-v2.10.0.tgz
     mode: '0644'
     timeout: 300
 
 - name: "Extract Harbor installer"
   ansible.builtin.unarchive:
-    src: ./harbor/harbor-offline-installer-v2.10.0.tgz
-    dest: ./harbor
+    src: /opt/harbor/harbor-offline-installer-v2.10.0.tgz
+    dest: /opt/harbor
     remote_src: yes
 
 - name: "Create Harbor data directory"
@@ -62,64 +62,64 @@
 
 - name: "Copy Harbor configuration template"
   ansible.builtin.copy:
-    src: ./harbor/harbor/harbor.yml.tmpl
-    dest: ./harbor/harbor/harbor.yml
+    src: /opt/harbor/harbor/harbor.yml.tmpl
+    dest: /opt/harbor/harbor/harbor.yml
     mode: '0644'
 
 - name: "Update Harbor configuration with custom settings"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^hostname: reg.mydomain.com'
     replace: 'hostname: {{ ansible_default_ipv4.address }}'
 
 - name: "Update Harbor admin password"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^harbor_admin_password: Harbor12345'
     replace: 'harbor_admin_password: Harbor12345'
 
 - name: "Update Harbor database password"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^  password: root123'
     replace: '  password: root123'
 
 - name: "Update Harbor data volume path"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^data_volume: /data'
     replace: 'data_volume: /data/harbor'
 
 - name: "Disable HTTPS in Harbor configuration"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^https:'
     replace: '# https:'
 
 - name: "Comment out HTTPS certificate settings"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^  port: 443'
     replace: '  # port: 443'
 
 - name: "Comment out HTTPS certificate path"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^  certificate:'
     replace: '  # certificate:'
 
 - name: "Comment out HTTPS private key path"
   ansible.builtin.replace:
-    path: ./harbor/harbor/harbor.yml
+    path: /opt/harbor/harbor/harbor.yml
     regexp: '^  private_key:'
     replace: '  # private_key:'
 
 - name: "Install Harbor"
   ansible.builtin.shell: |
-    cd ./harbor/harbor
+    cd /opt/harbor/harbor
     ./install.sh --with-trivy
   args:
-    creates: ./harbor/harbor/docker-compose.yml
+    creates: /opt/harbor/harbor/docker-compose.yml
   register: harbor_install_result
 
 - name: "Wait for Harbor services to start"
@@ -137,8 +137,8 @@
 
 - name: "Get Harbor admin password"
   ansible.builtin.shell: |
-    if [ -f "./harbor/harbor/harbor.yml" ]; then
-      grep -A 1 "harbor_admin_password:" ./harbor/harbor/harbor.yml | tail -1 | awk '{print $2}'
+    if [ -f "/opt/harbor/harbor/harbor.yml" ]; then
+      grep -A 1 "harbor_admin_password:" /opt/harbor/harbor/harbor.yml | tail -1 | awk '{print $2}'
     else
       echo "Harbor12345"
     fi
@@ -163,7 +163,7 @@
       #!/bin/bash
       # Harbor Management Script
       
-      HARBOR_DIR="./harbor/harbor"
+      HARBOR_DIR="/opt/harbor/harbor"
       
       case "$1" in
         start)
@@ -201,14 +201,14 @@
       # Harbor Backup Script
       
       BACKUP_DIR="/backup/harbor"
-      HARBOR_DIR="./harbor/harbor"
+      HARBOR_DIR="/opt/harbor/harbor"
       DATA_DIR="/data/harbor"
       
       mkdir -p $BACKUP_DIR
       
       echo "Creating Harbor backup..."
       tar -czf $BACKUP_DIR/harbor-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
-          -C ./harbor harbor \
+          -C /opt harbor \
           -C /data harbor
       
       echo "Backup completed: $BACKUP_DIR/harbor-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
