@@ -1,6 +1,6 @@
 ---
-- name: Install Jenkins on Jenkins Node
-  hosts: harbor-node
+- name: Install Harbor Container Registry
+  hosts: all
   become: yes
   roles:
     - install-harbor

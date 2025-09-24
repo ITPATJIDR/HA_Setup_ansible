@@ -29,77 +29,70 @@
 
 - name: "Create Harbor installation directory"
   ansible.builtin.file:
-    path: "{{ harbor_install_dir }}"
+    path: /opt/harbor
     state: directory
     mode: '0755'
 
 - name: "Download Harbor offline installer"
   ansible.builtin.get_url:
-    url: "{{ harbor_download_url }}"
-    dest: "{{ harbor_install_dir }}/harbor-offline-installer-{{ harbor_version }}.tgz"
+    url: "https://github.com/goharbor/harbor/releases/download/v2.10.0/harbor-offline-installer-v2.10.0.tgz"
+    dest: /opt/harbor/harbor-offline-installer-v2.10.0.tgz
     mode: '0644'
     timeout: 300
 
 - name: "Extract Harbor installer"
   ansible.builtin.unarchive:
-    src: "{{ harbor_install_dir }}/harbor-offline-installer-{{ harbor_version }}.tgz"
-    dest: "{{ harbor_install_dir }}"
+    src: /opt/harbor/harbor-offline-installer-v2.10.0.tgz
+    dest: /opt/harbor
     remote_src: yes
-
-- name: "Copy Harbor configuration template"
-  ansible.builtin.template:
-    src: harbor.yml.j2
-    dest: "{{ harbor_install_dir }}/harbor/harbor.yml"
-    mode: '0644'
-  notify: restart harbor
 
 - name: "Create Harbor data directory"
   ansible.builtin.file:
-    path: "{{ harbor_data_dir }}"
+    path: /data/harbor
     state: directory
     mode: '0755'
 
 - name: "Set Harbor data directory permissions"
   ansible.builtin.file:
-    path: "{{ harbor_data_dir }}"
-    owner: "{{ harbor_user }}"
-    group: "{{ harbor_group }}"
+    path: /data/harbor
+    owner: 10000
+    group: 10000
     mode: '0755'
     recurse: yes
 
 - name: "Install Harbor"
   ansible.builtin.shell: |
-    cd {{ harbor_install_dir }}/harbor
+    cd /opt/harbor/harbor
     ./install.sh --with-trivy
   args:
-    creates: "{{ harbor_install_dir }}/harbor/docker-compose.yml"
+    creates: /opt/harbor/harbor/docker-compose.yml
   register: harbor_install_result
 
 - name: "Wait for Harbor services to start"
   ansible.builtin.wait_for:
-    port: "{{ harbor_http_port }}"
+    port: 80
     host: "{{ ansible_default_ipv4.address }}"
     delay: 30
     timeout: 300
 
-- name: "Configure firewall for Harbor"
+- name: "Configure firewall for Harbor HTTP"
   ansible.builtin.ufw:
     rule: allow
-    port: "{{ harbor_http_port }}"
+    port: 80
     proto: tcp
 
 - name: "Configure firewall for Harbor HTTPS"
   ansible.builtin.ufw:
     rule: allow
-    port: "{{ harbor_https_port }}"
+    port: 443
     proto: tcp
 
 - name: "Get Harbor admin password"
   ansible.builtin.shell: |
-    if [ -f "{{ harbor_install_dir }}/harbor/harbor.yml" ]; then
-      grep -A 1 "harbor_admin_password:" {{ harbor_install_dir }}/harbor/harbor.yml | tail -1 | awk '{print $2}'
+    if [ -f "/opt/harbor/harbor/harbor.yml" ]; then
+      grep -A 1 "harbor_admin_password:" /opt/harbor/harbor/harbor.yml | tail -1 | awk '{print $2}'
     else
-      echo "admin"
+      echo "Harbor12345"
     fi
   register: harbor_admin_password
   changed_when: false
@@ -108,23 +101,69 @@
   ansible.builtin.debug:
     msg: |
       Harbor is now running on:
-      HTTP:  http://{{ ansible_default_ipv4.address }}:{{ harbor_http_port }}
-      HTTPS: https://{{ ansible_default_ipv4.address }}:{{ harbor_https_port }}
+      HTTP:  http://{{ ansible_default_ipv4.address }}:80
+      HTTPS: https://{{ ansible_default_ipv4.address }}:443
       Default admin credentials:
       Username: admin
       Password: {{ harbor_admin_password.stdout }}
       
       To login via Docker:
-      docker login {{ ansible_default_ipv4.address }}:{{ harbor_https_port }}
+      docker login {{ ansible_default_ipv4.address }}
 
 - name: "Create Harbor management script"
-  ansible.builtin.template:
-    src: harbor-manage.sh.j2
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      # Harbor Management Script
+      
+      HARBOR_DIR="/opt/harbor/harbor"
+      
+      case "$1" in
+        start)
+          echo "Starting Harbor..."
+          cd $HARBOR_DIR && docker-compose up -d
+          ;;
+        stop)
+          echo "Stopping Harbor..."
+          cd $HARBOR_DIR && docker-compose down
+          ;;
+        restart)
+          echo "Restarting Harbor..."
+          cd $HARBOR_DIR && docker-compose down && docker-compose up -d
+          ;;
+        status)
+          echo "Harbor Status:"
+          cd $HARBOR_DIR && docker-compose ps
+          ;;
+        logs)
+          echo "Harbor Logs:"
+          cd $HARBOR_DIR && docker-compose logs -f
+          ;;
+        *)
+          echo "Usage: $0 {start|stop|restart|status|logs}"
+          exit 1
+          ;;
+      esac
     dest: /usr/local/bin/harbor-manage
     mode: '0755'
 
 - name: "Create Harbor backup script"
-  ansible.builtin.template:
-    src: harbor-backup.sh.j2
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      # Harbor Backup Script
+      
+      BACKUP_DIR="/backup/harbor"
+      HARBOR_DIR="/opt/harbor/harbor"
+      DATA_DIR="/data/harbor"
+      
+      mkdir -p $BACKUP_DIR
+      
+      echo "Creating Harbor backup..."
+      tar -czf $BACKUP_DIR/harbor-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+          -C /opt harbor \
+          -C /data harbor
+      
+      echo "Backup completed: $BACKUP_DIR/harbor-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
     dest: /usr/local/bin/harbor-backup
     mode: '0755'
