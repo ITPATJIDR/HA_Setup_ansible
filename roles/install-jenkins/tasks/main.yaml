@@ -69,7 +69,39 @@
       - curl
       - unzip
       - docker.io
+      - ca-certificates
+      - apt-transport-https
     state: present
+
+- name: "Add Kubernetes GPG key"
+  ansible.builtin.shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: "Add Kubernetes repository"
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"
+    mode: '0644'
+
+- name: "Update package cache after adding Kubernetes repo"
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: "Install kubectl"
+  ansible.builtin.apt:
+    name: kubectl
+    state: present
+
+- name: "Verify kubectl installation"
+  ansible.builtin.command: kubectl version --client
+  register: kubectl_version
+  changed_when: false
+
+- name: "Display kubectl version"
+  ansible.builtin.debug:
+    msg: "kubectl installed successfully: {{ kubectl_version.stdout_lines[0] }}"
 
 - name: "Add jenkins user to docker group"
   ansible.builtin.user:
