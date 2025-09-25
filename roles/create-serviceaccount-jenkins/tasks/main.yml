@@ -88,6 +88,36 @@
   register: ca_cert
   changed_when: false
 
+- name: "Create kubeconfig directory for Jenkins"
+  ansible.builtin.file:
+    path: /home/{{ ansible_user }}/jenkins-kubeconfig
+    state: directory
+    mode: '0755'
+
+- name: "Create kubeconfig file for Jenkins ServiceAccount"
+  ansible.builtin.copy:
+    content: |
+      apiVersion: v1
+      kind: Config
+      clusters:
+      - cluster:
+          certificate-authority-data: {{ ca_cert.stdout | b64encode }}
+          server: {{ api_server.stdout }}
+        name: jenkins-cluster
+      contexts:
+      - context:
+          cluster: jenkins-cluster
+          user: jenkins-user
+          namespace: jenkins
+        name: jenkins-context
+      current-context: jenkins-context
+      users:
+      - name: jenkins-user
+        user:
+          token: {{ jenkins_token.stdout }}
+    dest: /home/{{ ansible_user }}/jenkins-kubeconfig/config
+    mode: '0600'
+
 - name: "Display Jenkins ServiceAccount Information"
   ansible.builtin.debug:
     msg: |
@@ -103,11 +133,18 @@
       CA Certificate (first 100 chars):
       {{ ca_cert.stdout[:100] }}...
       
+      Kubeconfig file created at:
+      /home/{{ ansible_user }}/jenkins-kubeconfig/config
+      
       ===============================================
       Usage Instructions:
       ===============================================
       
-      Set these environment variables:
+      Option 1 - Use kubeconfig file:
+      export KUBECONFIG=/home/{{ ansible_user }}/jenkins-kubeconfig/config
+      kubectl get pods --all-namespaces
+      
+      Option 2 - Use environment variables:
       export APISERVER="{{ api_server.stdout }}"
       export TOKEN="{{ jenkins_token.stdout }}"
       export CACERT=/path/to/ca.crt
