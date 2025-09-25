@@ -46,45 +46,61 @@
     delay: 10
     timeout: 60
 
-- name: "Wait for Jenkins to be fully initialized"
+- name: "Check if Jenkins is already configured"
+  ansible.builtin.stat:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_password_file
+
+- name: "Wait for Jenkins to be fully initialized (only if not configured)"
   ansible.builtin.wait_for:
     path: /var/lib/jenkins/secrets/initialAdminPassword
     timeout: 120
     delay: 5
+  when: not jenkins_password_file.stat.exists
 
-- name: "Get Jenkins initial admin password"
+- name: "Get Jenkins initial admin password (if available)"
   ansible.builtin.shell: cat /var/lib/jenkins/secrets/initialAdminPassword
   register: jenkins_password
   changed_when: false
   failed_when: false
+  when: jenkins_password_file.stat.exists
 
-- name: "Get Jenkins initial admin password (alternative method)"
+- name: "Check Jenkins configuration status"
   ansible.builtin.shell: |
-    if [ -f /var/lib/jenkins/secrets/initialAdminPassword ]; then
-      cat /var/lib/jenkins/secrets/initialAdminPassword
+    if [ -f /var/lib/jenkins/config.xml ]; then
+      if grep -q "useSecurity>true" /var/lib/jenkins/config.xml; then
+        echo "Jenkins is configured and secured"
+      else
+        echo "Jenkins is configured but not secured"
+      fi
     else
-      echo "Jenkins not fully initialized yet. Please check Jenkins web interface."
+      echo "Jenkins configuration not found"
     fi
-  register: jenkins_password_alt
+  register: jenkins_config_status
   changed_when: false
-  when: jenkins_password.rc != 0
 
-- name: "Display Jenkins initial admin password"
+- name: "Display Jenkins status and access information"
   ansible.builtin.debug:
     msg: |
-      {% if jenkins_password.rc == 0 %}
-      Jenkins initial admin password: {{ jenkins_password.stdout }}
-      {% else %}
-      {{ jenkins_password_alt.stdout }}
-      Please wait for Jenkins to fully initialize and check the web interface.
-      {% endif %}
-
-- name: "Display Jenkins access information"
-  ansible.builtin.debug:
-    msg: |
-      Jenkins is now running on: http://{{ ansible_default_ipv4.address }}:8080
+      ===============================================
+      Jenkins Status: {{ jenkins_config_status.stdout }}
+      ===============================================
+      
+      {% if jenkins_password_file.stat.exists and jenkins_password.rc == 0 %}
       Initial admin password: {{ jenkins_password.stdout }}
       Please complete the setup wizard in your browser.
+      {% elif jenkins_password_file.stat.exists %}
+      Jenkins is initializing. Please wait and check the web interface.
+      {% else %}
+      Jenkins has already been configured.
+      The initial admin password has been used and removed.
+      Please use your existing admin credentials.
+      {% endif %}
+      
+      Jenkins URL: http://{{ ansible_default_ipv4.address }}:8080
+      
+      ===============================================
+
 
 - name: "Install additional useful packages for Jenkins"
   ansible.builtin.apt:
