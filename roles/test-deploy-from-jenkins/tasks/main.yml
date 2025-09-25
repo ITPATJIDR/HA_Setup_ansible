@@ -1,0 +1,166 @@
+---
+- name: "Install Jenkins CLI dependencies"
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+    state: present
+
+- name: "Wait for Jenkins to be ready"
+  ansible.builtin.wait_for:
+    port: 8080
+    host: "{{ ansible_default_ipv4.address }}"
+    delay: 10
+    timeout: 120
+
+- name: "Get Jenkins CLI jar"
+  ansible.builtin.get_url:
+    url: "http://{{ ansible_default_ipv4.address }}:8080/jnlpJars/jenkins-cli.jar"
+    dest: /tmp/jenkins-cli.jar
+    mode: '0644'
+
+- name: "Create Jenkins pipeline script"
+  ansible.builtin.copy:
+    dest: /tmp/simple-pod-pipeline.groovy
+    content: |
+      pipeline {
+          agent any
+          
+          environment {
+              KUBECONFIG = '/var/jenkins_home/.kube/config'
+          }
+          
+          stages {
+              stage('Checkout') {
+                  steps {
+                      echo 'Starting pipeline for simple pod deployment'
+                  }
+              }
+              
+              stage('Deploy Simple Pod') {
+                  steps {
+                      script {
+                          sh '''
+                              cat <<EOF | kubectl apply -f -
+                              apiVersion: v1
+                              kind: Pod
+                              metadata:
+                                name: simple-test-pod
+                                labels:
+                                  app: simple-test
+                              spec:
+                                containers:
+                                - name: nginx
+                                  image: nginx:latest
+                                  ports:
+                                  - containerPort: 80
+                                  resources:
+                                    requests:
+                                      memory: "64Mi"
+                                      cpu: "250m"
+                                    limits:
+                                      memory: "128Mi"
+                                      cpu: "500m"
+                              EOF
+                          '''
+                      }
+                  }
+              }
+              
+              stage('Verify Deployment') {
+                  steps {
+                      sh '''
+                          echo "Waiting for pod to be ready..."
+                          kubectl wait --for=condition=Ready pod/simple-test-pod --timeout=60s
+                          echo "Pod status:"
+                          kubectl get pod simple-test-pod
+                          echo "Pod details:"
+                          kubectl describe pod simple-test-pod
+                      '''
+                  }
+              }
+              
+              stage('Test Pod') {
+                  steps {
+                      sh '''
+                          echo "Testing pod connectivity..."
+                          kubectl exec simple-test-pod -- curl -f http://localhost:80 || echo "Pod is running but curl test failed"
+                      '''
+                  }
+              }
+          }
+          
+          post {
+              always {
+                  echo 'Pipeline completed'
+              }
+              success {
+                  echo 'Pod deployment successful!'
+              }
+              failure {
+                  echo 'Pod deployment failed!'
+                  sh 'kubectl get pods | grep simple-test-pod || echo "Pod not found"'
+              }
+          }
+      }
+
+- name: "Create Jenkins job using CLI"
+  ansible.builtin.shell: |
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} create-job "simple-pod-deployment" < /tmp/simple-pod-pipeline.groovy
+  register: create_job_result
+  failed_when: false
+
+- name: "Display Jenkins job creation result"
+  ansible.builtin.debug:
+    msg: |
+      Jenkins job creation result:
+      {{ create_job_result.stdout }}
+      {% if create_job_result.rc == 0 %}
+      Job 'simple-pod-deployment' created successfully!
+      {% else %}
+      Job may already exist or creation failed.
+      {% endif %}
+
+- name: "Trigger Jenkins pipeline"
+  ansible.builtin.shell: |
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} build "simple-pod-deployment"
+  register: trigger_build_result
+  failed_when: false
+
+- name: "Display pipeline trigger result"
+  ansible.builtin.debug:
+    msg: |
+      Pipeline trigger result:
+      {{ trigger_build_result.stdout }}
+      {% if trigger_build_result.rc == 0 %}
+      Pipeline 'simple-pod-deployment' triggered successfully!
+      {% else %}
+      Pipeline trigger failed or job not found.
+      {% endif %}
+
+- name: "Wait for build to start"
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: "Get latest build status"
+  ansible.builtin.shell: |
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} get-job "simple-pod-deployment"
+  register: job_status
+  failed_when: false
+
+- name: "Display Jenkins access information"
+  ansible.builtin.debug:
+    msg: |
+      Jenkins Pipeline Setup Complete!
+      
+      Jenkins URL: http://{{ ansible_default_ipv4.address }}:8080
+      Job Name: simple-pod-deployment
+      
+      To view the pipeline:
+      1. Go to http://{{ ansible_default_ipv4.address }}:8080
+      2. Login with admin/{{ jenkins_admin_password }}
+      3. Click on 'simple-pod-deployment' job
+      4. View the build progress and logs
+      
+      To manually trigger the pipeline:
+      java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} build "simple-pod-deployment" 

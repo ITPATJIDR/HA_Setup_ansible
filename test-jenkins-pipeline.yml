@@ -1,0 +1,8 @@
+---
+- name: Test Jenkins Pipeline Deployment
+  hosts: jenkins-node
+  become: yes
+  vars:
+    jenkins_admin_password: "admin"  # Change this to your Jenkins admin password
+  roles:
+    - test-deploy-from-jenkins
