@@ -1,0 +1,85 @@
+---
+- name: "Trigger Jenkins Pipeline"
+  uri:
+    url: "{{ jenkins_url }}/job/{{ jenkins_job }}/build"
+    method: POST
+    user: "{{ jenkins_user }}"
+    password: "{{ jenkins_token }}"
+    force_basic_auth: yes
+    status_code: [200, 201, 302]
+  register: jenkins_trigger_result
+
+- name: "Get Build Queue ID"
+  uri:
+    url: "{{ jenkins_url }}/queue/api/json"
+    method: GET
+    user: "{{ jenkins_user }}"
+    password: "{{ jenkins_token }}"
+    force_basic_auth: yes
+  register: queue_result
+  when: jenkins_trigger_result.status == 201
+
+- name: "Wait for Build to Start"
+  uri:
+    url: "{{ jenkins_url }}/queue/item/{{ item.id }}/api/json"
+    method: GET
+    user: "{{ jenkins_user }}"
+    password: "{{ jenkins_token }}"
+    force_basic_auth: yes
+  register: build_status
+  loop: "{{ queue_result.json.items }}"
+  until: build_status.json.executable is defined
+  retries: 30
+  delay: 5
+  when: jenkins_trigger_result.status == 201
+
+- name: "Get Build Number"
+  set_fact:
+    build_number: "{{ build_status.json.executable.number }}"
+  when: jenkins_trigger_result.status == 201 and build_status.json.executable is defined
+
+- name: "Monitor Build Progress"
+  uri:
+    url: "{{ jenkins_url }}/job/{{ jenkins_job }}/{{ build_number }}/api/json"
+    method: GET
+    user: "{{ jenkins_user }}"
+    password: "{{ jenkins_token }}"
+    force_basic_auth: yes
+  register: build_progress
+  until: build_progress.json.building == false
+  retries: "{{ timeout_minutes * 12 }}"
+  delay: 5
+  when: wait_for_completion and build_number is defined
+
+- name: "Display Pipeline Trigger Results"
+  debug:
+    msg: |
+      ===============================================
+      Jenkins Pipeline Trigger Results
+      ===============================================
+      
+      Status: {{ jenkins_trigger_result.status }}
+      Job: {{ jenkins_job }}
+      Build Number: {{ build_number | default('N/A') }}
+      
+      {% if jenkins_trigger_result.status == 201 %}
+      ✅ Pipeline triggered successfully!
+      Build URL: {{ jenkins_url }}/job/{{ jenkins_job }}/{{ build_number }}/
+      {% elif jenkins_trigger_result.status == 200 %}
+      ✅ Pipeline was already running or queued
+      {% else %}
+      ❌ Failed to trigger pipeline
+      {% endif %}
+      
+      {% if wait_for_completion and build_progress is defined %}
+      Final Status: {{ build_progress.json.result | default('Unknown') }}
+      {% if build_progress.json.result == 'SUCCESS' %}
+      ✅ Pipeline completed successfully!
+      {% elif build_progress.json.result == 'FAILURE' %}
+      ❌ Pipeline failed!
+      {% elif build_progress.json.result == 'ABORTED' %}
+      ⚠️ Pipeline was aborted!
+      {% endif %}
+      {% endif %}
+      
+      ===============================================

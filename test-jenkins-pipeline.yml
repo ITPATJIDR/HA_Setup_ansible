@@ -1,6 +1,0 @@
----
-- name: Test Jenkins Pipeline Deployment
-  hosts: jenkins-node
-  become: yes
-  roles:
-    - test-deploy-from-jenkins

@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        KUBE_CREDENTIAL = '92e62619-a72a-46ce-a024-f96315273906'
+        KUBE_CREDENTIAL = 'ad8590f3-3946-47a8-80c3-f371769c8621'
         POD_NAME = 'busybox-test-pod'
     }
 

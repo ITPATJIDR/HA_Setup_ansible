@@ -1,0 +1,14 @@
+---
+- name: Trigger Jenkins Pipeline
+  hosts: localhost
+  gather_facts: false
+  vars:
+    jenkins_url: "http://192.168.101.14:8080"
+    jenkins_job: "test-deploy"
+    jenkins_user: "admin"
+    jenkins_token: "11b828ca69c8c6dce31d863c6e9003e5b8"
+    wait_for_completion: true
+    timeout_minutes: 15
+  
+  roles:
+    - test-trigger-jenkins
