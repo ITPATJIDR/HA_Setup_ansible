@@ -34,26 +34,26 @@ pipeline {
                         
                         echo "3. Deploying busybox pod..."
                         cat <<EOF | kubectl apply -f -
-                        apiVersion: v1
-                        kind: Pod
-                        metadata:
-                          name: $POD_NAME
-                          labels:
-                            app: busybox-test
-                            environment: jenkins-test
-                        spec:
-                          containers:
-                          - name: busybox
-                            image: busybox:latest
-                            command: ['sleep', '3600']
-                            resources:
-                              requests:
-                                memory: "32Mi"
-                                cpu: "100m"
-                              limits:
-                                memory: "64Mi"
-                                cpu: "200m"
-                        EOF
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $POD_NAME
+  labels:
+    app: busybox-test
+    environment: jenkins-test
+spec:
+  containers:
+  - name: busybox
+    image: busybox:latest
+    command: ['sleep', '3600']
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "100m"
+      limits:
+        memory: "64Mi"
+        cpu: "200m"
+EOF
                         
                         echo "4. Waiting for pod to be ready..."
                         kubectl wait --for=condition=Ready pod/$POD_NAME --timeout=120s

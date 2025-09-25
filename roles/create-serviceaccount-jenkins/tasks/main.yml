@@ -30,7 +30,7 @@
         name: jenkins-cluster-role
       rules:
       - apiGroups: [""]
-        resources: ["pods", "pods/log", "services", "secrets", "configmaps", "namespaces"]
+        resources: ["pods", "pods/log", "services", "secrets", "configmaps", "namespaces", "nodes", "events"]
         verbs: ["get", "list", "watch", "create", "update", "delete"]
       - apiGroups: ["apps"]
         resources: ["deployments", "statefulsets", "replicasets"]
@@ -70,7 +70,7 @@
         namespace: jenkins
       rules:
       - apiGroups: [""]
-        resources: ["pods", "pods/log", "services", "secrets", "configmaps"]
+        resources: ["pods", "pods/log", "services", "secrets", "configmaps", "events"]
         verbs: ["get", "list", "watch", "create", "update", "delete"]
       - apiGroups: ["apps"]
         resources: ["deployments", "statefulsets", "replicasets"]
