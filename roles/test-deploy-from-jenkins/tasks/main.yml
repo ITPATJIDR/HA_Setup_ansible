@@ -21,7 +21,7 @@
 
 - name: "Test Jenkins CLI connection"
   ansible.builtin.shell: |
-    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} version
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_initial_password.stdout }} version
   register: jenkins_cli_test
   failed_when: false
 
@@ -34,7 +34,7 @@
 
 - name: "List existing Jenkins jobs"
   ansible.builtin.shell: |
-    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} list-jobs
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_initial_password.stdout }} list-jobs
   register: existing_jobs
   failed_when: false
 
@@ -129,12 +129,21 @@
           }
       }
 
+- name: "Get Jenkins initial admin password"
+  ansible.builtin.shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_initial_password
+  changed_when: false
+
+- name: "Display Jenkins initial admin password"
+  ansible.builtin.debug:
+    msg: "Jenkins initial admin password: {{ jenkins_initial_password.stdout }}"
+
 - name: "Create Jenkins job using REST API"
   ansible.builtin.uri:
     url: "http://{{ ansible_default_ipv4.address }}:8080/createItem?name=simple-pod-deployment"
     method: POST
     user: admin
-    password: "{{ jenkins_admin_password }}"
+    password: "{{ jenkins_initial_password.stdout }}"
     headers:
       Content-Type: "application/xml"
     body: |
@@ -250,7 +259,7 @@
 
 - name: "Verify job was created"
   ansible.builtin.shell: |
-    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} list-jobs | grep simple-pod-deployment
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_initial_password.stdout }} list-jobs | grep simple-pod-deployment
   register: job_verification
   failed_when: false
 
@@ -270,7 +279,7 @@
     url: "http://{{ ansible_default_ipv4.address }}:8080/job/simple-pod-deployment/build"
     method: POST
     user: admin
-    password: "{{ jenkins_admin_password }}"
+    password: "{{ jenkins_initial_password.stdout }}"
     status_code: [200, 201, 302]
   register: trigger_build_result
   failed_when: false
@@ -292,7 +301,7 @@
 
 - name: "Get latest build status"
   ansible.builtin.shell: |
-    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} get-job "simple-pod-deployment"
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_initial_password.stdout }} get-job "simple-pod-deployment"
   register: job_status
   failed_when: false
 
@@ -306,9 +315,9 @@
       
       To view the pipeline:
       1. Go to http://{{ ansible_default_ipv4.address }}:8080
-      2. Login with admin/{{ jenkins_admin_password }}
+      2. Login with admin/{{ jenkins_initial_password.stdout }}
       3. Click on 'simple-pod-deployment' job
       4. View the build progress and logs
       
       To manually trigger the pipeline:
-      java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} build "simple-pod-deployment" 
+      java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_initial_password.stdout }} build "simple-pod-deployment" 
