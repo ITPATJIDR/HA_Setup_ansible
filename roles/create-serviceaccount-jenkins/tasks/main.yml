@@ -72,3 +72,50 @@
           kubernetes.io/service-account.name: jenkins
       type: kubernetes.io/service-account-token
     state: present
+
+- name: "Get API Server URL"
+  ansible.builtin.shell: kubectl config view -o jsonpath='{.clusters[0].cluster.server}'
+  register: api_server
+  changed_when: false
+
+- name: "Get Jenkins ServiceAccount Token"
+  ansible.builtin.shell: kubectl get secret jenkins-sa-token -n jenkins -o jsonpath='{.data.token}' | base64 -d
+  register: jenkins_token
+  changed_when: false
+
+- name: "Get CA Certificate"
+  ansible.builtin.shell: kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d
+  register: ca_cert
+  changed_when: false
+
+- name: "Display Jenkins ServiceAccount Information"
+  ansible.builtin.debug:
+    msg: |
+      ===============================================
+      Jenkins ServiceAccount Configuration
+      ===============================================
+      
+      API Server: {{ api_server.stdout }}
+      
+      ServiceAccount Token:
+      {{ jenkins_token.stdout }}
+      
+      CA Certificate (first 100 chars):
+      {{ ca_cert.stdout[:100] }}...
+      
+      ===============================================
+      Usage Instructions:
+      ===============================================
+      
+      Set these environment variables:
+      export APISERVER="{{ api_server.stdout }}"
+      export TOKEN="{{ jenkins_token.stdout }}"
+      export CACERT=/path/to/ca.crt
+      
+      Save CA certificate to file:
+      echo "{{ ca_cert.stdout }}" > ca.crt
+      
+      Test access:
+      curl --cacert ca.crt -H "Authorization: Bearer $TOKEN" "$APISERVER/api/v1/namespaces/default/pods"
+      
+      ===============================================
