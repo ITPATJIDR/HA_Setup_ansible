@@ -48,18 +48,18 @@
 
 - name: "Check if Jenkins is already configured"
   ansible.builtin.stat:
-    path: /var/lib/jenkins/secrets/initialAdminPassword
+    path: /var/lib/jenkins/secrets/master.key
   register: jenkins_password_file
 
 - name: "Wait for Jenkins to be fully initialized (only if not configured)"
   ansible.builtin.wait_for:
-    path: /var/lib/jenkins/secrets/initialAdminPassword
+    path: /var/lib/jenkins/secrets/master.key
     timeout: 120
     delay: 5
   when: not jenkins_password_file.stat.exists
 
 - name: "Get Jenkins initial admin password (if available)"
-  ansible.builtin.shell: cat /var/lib/jenkins/secrets/initialAdminPassword
+  ansible.builtin.shell: cat /var/lib/jenkins/secrets/master.key
   register: jenkins_password
   changed_when: false
   failed_when: false
