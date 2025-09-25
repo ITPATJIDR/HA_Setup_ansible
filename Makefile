@@ -18,3 +18,8 @@ install-istio:
 
 create-serviceaccount-jenkins:
 	ansible-playbook -i hosts.ini create-serviceaccount-jenkins.yml --ask-become-pass 
+
+test-jenkins-pipeline:
+	ansible-playbook -i hosts.ini test-jenkins-pipeline.yml --ask-become-pass
+
+	
