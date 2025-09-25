@@ -19,6 +19,11 @@
   register: queue_result
   when: jenkins_trigger_result.status == 201
 
+- name: "Debug Queue Result"
+  debug:
+    msg: "Queue result: {{ queue_result.json | default('No queue data') }}"
+  when: jenkins_trigger_result.status == 201
+
 - name: "Wait for Build to Start"
   uri:
     url: "{{ jenkins_url }}/queue/item/{{ item.id }}/api/json"
@@ -27,11 +32,11 @@
     password: "{{ jenkins_token }}"
     force_basic_auth: yes
   register: build_status
-  loop: "{{ queue_result.json.items }}"
+  loop: "{{ queue_result.json.items | default([]) }}"
   until: build_status.json.executable is defined
   retries: 30
   delay: 5
-  when: jenkins_trigger_result.status == 201
+  when: jenkins_trigger_result.status == 201 and queue_result.json.items is defined and queue_result.json.items | length > 0
 
 - name: "Get Build Number"
   set_fact:
