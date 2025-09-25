@@ -15,3 +15,6 @@ delete-istio:
 
 install-istio:
 	ansible-playbook -i hosts.ini install-istio.yml --ask-become-pass 
+
+create-serviceaccount-jenkins:
+	ansible-playbook -i hosts.ini create-serviceaccount-jenkins.yml --ask-become-pass 
