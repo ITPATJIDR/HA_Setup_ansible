@@ -55,36 +55,3 @@
   retries: "{{ timeout_minutes * 12 }}"
   delay: 5
   when: wait_for_completion and build_number is defined
-
-- name: "Display Pipeline Trigger Results"
-  debug:
-    msg: |
-      ===============================================
-      Jenkins Pipeline Trigger Results
-      ===============================================
-      
-      Status: {{ jenkins_trigger_result.status }}
-      Job: {{ jenkins_job }}
-      Build Number: {{ build_number | default('N/A') }}
-      
-      {% if jenkins_trigger_result.status == 201 %}
-      ✅ Pipeline triggered successfully!
-      Build URL: {{ jenkins_url }}/job/{{ jenkins_job }}/{{ build_number }}/
-      {% elif jenkins_trigger_result.status == 200 %}
-      ✅ Pipeline was already running or queued
-      {% else %}
-      ❌ Failed to trigger pipeline
-      {% endif %}
-      
-      {% if wait_for_completion and build_progress is defined %}
-      Final Status: {{ build_progress.json.result | default('Unknown') }}
-      {% if build_progress.json.result == 'SUCCESS' %}
-      ✅ Pipeline completed successfully!
-      {% elif build_progress.json.result == 'FAILURE' %}
-      ❌ Pipeline failed!
-      {% elif build_progress.json.result == 'ABORTED' %}
-      ⚠️ Pipeline was aborted!
-      {% endif %}
-      {% endif %}
-      
-      ===============================================
