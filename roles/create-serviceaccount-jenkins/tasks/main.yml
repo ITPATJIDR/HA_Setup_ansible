@@ -21,38 +21,42 @@
     kind: ServiceAccount
     state: present
 
-- name: "Create Jenkins Role"
+- name: "Create Jenkins ClusterRole"
   kubernetes.core.k8s:
     definition:
       apiVersion: rbac.authorization.k8s.io/v1
-      kind: Role
+      kind: ClusterRole
       metadata:
-        name: jenkins-role
-        namespace: jenkins
+        name: jenkins-cluster-role
       rules:
       - apiGroups: [""]
-        resources: ["pods", "pods/log", "services", "secrets", "configmaps"]
+        resources: ["pods", "pods/log", "services", "secrets", "configmaps", "namespaces"]
         verbs: ["get", "list", "watch", "create", "update", "delete"]
       - apiGroups: ["apps"]
         resources: ["deployments", "statefulsets", "replicasets"]
         verbs: ["get", "list", "watch", "create", "update", "delete"]
+      - apiGroups: ["networking.k8s.io"]
+        resources: ["ingresses", "networkpolicies"]
+        verbs: ["get", "list", "watch", "create", "update", "delete"]
+      - apiGroups: ["batch"]
+        resources: ["jobs", "cronjobs"]
+        verbs: ["get", "list", "watch", "create", "update", "delete"]
     state: present
 
-- name: "Create Jenkins RoleBinding"
+- name: "Create Jenkins ClusterRoleBinding"
   kubernetes.core.k8s:
     definition:
       apiVersion: rbac.authorization.k8s.io/v1
-      kind: RoleBinding
+      kind: ClusterRoleBinding
       metadata:
-        name: jenkins-rolebinding
-        namespace: jenkins
+        name: jenkins-cluster-rolebinding
       subjects:
       - kind: ServiceAccount
         name: jenkins
         namespace: jenkins
       roleRef:
-        kind: Role
-        name: jenkins-role
+        kind: ClusterRole
+        name: jenkins-cluster-role
         apiGroup: rbac.authorization.k8s.io
     state: present
 
