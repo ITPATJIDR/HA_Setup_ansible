@@ -129,16 +129,22 @@
           }
       }
 
-- name: "Create Jenkins job using CLI (Pipeline type)"
-  ansible.builtin.shell: |
-    cat << 'EOF' | java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} create-job "simple-pod-deployment"
-    <?xml version='1.1' encoding='UTF-8'?>
-    <flow-definition plugin="workflow-job@2.45">
-      <description>Simple pod deployment pipeline</description>
-      <keepDependencies>false</keepDependencies>
-      <properties/>
-      <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.92">
-        <script>
+- name: "Create Jenkins job using REST API"
+  ansible.builtin.uri:
+    url: "http://{{ ansible_default_ipv4.address }}:8080/createItem?name=simple-pod-deployment"
+    method: POST
+    user: admin
+    password: "{{ jenkins_admin_password }}"
+    headers:
+      Content-Type: "application/xml"
+    body: |
+      <?xml version='1.1' encoding='UTF-8'?>
+      <flow-definition plugin="workflow-job@2.45">
+        <description>Simple pod deployment pipeline</description>
+        <keepDependencies>false</keepDependencies>
+        <properties/>
+        <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.92">
+          <script>
       pipeline {
           agent any
           
@@ -219,13 +225,13 @@
               }
           }
       }
-        </script>
-        <sandbox>true</sandbox>
-      </definition>
-      <triggers/>
-      <disabled>false</disabled>
-    </flow-definition>
-    EOF
+          </script>
+          <sandbox>true</sandbox>
+        </definition>
+        <triggers/>
+        <disabled>false</disabled>
+      </flow-definition>
+    status_code: [200, 400]
   register: create_job_result
   failed_when: false
 
@@ -233,11 +239,13 @@
   ansible.builtin.debug:
     msg: |
       Jenkins job creation result:
-      {{ create_job_result.stdout }}
-      {% if create_job_result.rc == 0 %}
+      Status Code: {{ create_job_result.status }}
+      {% if create_job_result.status == 200 %}
       Job 'simple-pod-deployment' created successfully!
-      {% else %}
+      {% elif create_job_result.status == 400 %}
       Job may already exist or creation failed.
+      {% else %}
+      Job creation failed with status: {{ create_job_result.status }}
       {% endif %}
 
 - name: "Verify job was created"
@@ -257,9 +265,13 @@
       Job 'simple-pod-deployment' not found in Jenkins.
       {% endif %}
 
-- name: "Trigger Jenkins pipeline"
-  ansible.builtin.shell: |
-    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} build "simple-pod-deployment"
+- name: "Trigger Jenkins pipeline using REST API"
+  ansible.builtin.uri:
+    url: "http://{{ ansible_default_ipv4.address }}:8080/job/simple-pod-deployment/build"
+    method: POST
+    user: admin
+    password: "{{ jenkins_admin_password }}"
+    status_code: [200, 201, 302]
   register: trigger_build_result
   failed_when: false
 
@@ -267,11 +279,11 @@
   ansible.builtin.debug:
     msg: |
       Pipeline trigger result:
-      {{ trigger_build_result.stdout }}
-      {% if trigger_build_result.rc == 0 %}
+      Status Code: {{ trigger_build_result.status }}
+      {% if trigger_build_result.status in [200, 201, 302] %}
       Pipeline 'simple-pod-deployment' triggered successfully!
       {% else %}
-      Pipeline trigger failed or job not found.
+      Pipeline trigger failed with status: {{ trigger_build_result.status }}
       {% endif %}
 
 - name: "Wait for build to start"
