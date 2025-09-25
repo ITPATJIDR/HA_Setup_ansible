@@ -19,6 +19,31 @@
     dest: /tmp/jenkins-cli.jar
     mode: '0644'
 
+- name: "Test Jenkins CLI connection"
+  ansible.builtin.shell: |
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} version
+  register: jenkins_cli_test
+  failed_when: false
+
+- name: "Display Jenkins CLI test result"
+  ansible.builtin.debug:
+    msg: |
+      Jenkins CLI test result:
+      {{ jenkins_cli_test.stdout }}
+      Return code: {{ jenkins_cli_test.rc }}
+
+- name: "List existing Jenkins jobs"
+  ansible.builtin.shell: |
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} list-jobs
+  register: existing_jobs
+  failed_when: false
+
+- name: "Display existing jobs"
+  ansible.builtin.debug:
+    msg: |
+      Existing Jenkins jobs:
+      {{ existing_jobs.stdout }}
+
 - name: "Create Jenkins pipeline script"
   ansible.builtin.copy:
     dest: /tmp/simple-pod-pipeline.groovy
@@ -104,9 +129,103 @@
           }
       }
 
-- name: "Create Jenkins job using CLI"
+- name: "Create Jenkins job using CLI (Pipeline type)"
   ansible.builtin.shell: |
-    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} create-job "simple-pod-deployment" < /tmp/simple-pod-pipeline.groovy
+    cat << 'EOF' | java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} create-job "simple-pod-deployment"
+    <?xml version='1.1' encoding='UTF-8'?>
+    <flow-definition plugin="workflow-job@2.45">
+      <description>Simple pod deployment pipeline</description>
+      <keepDependencies>false</keepDependencies>
+      <properties/>
+      <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.92">
+        <script>
+      pipeline {
+          agent any
+          
+          environment {
+              KUBECONFIG = '/var/jenkins_home/.kube/config'
+          }
+          
+          stages {
+              stage('Checkout') {
+                  steps {
+                      echo 'Starting pipeline for simple pod deployment'
+                  }
+              }
+              
+              stage('Deploy Simple Pod') {
+                  steps {
+                      script {
+                          sh '''
+                              cat <<EOF | kubectl apply -f -
+                              apiVersion: v1
+                              kind: Pod
+                              metadata:
+                                name: simple-test-pod
+                                labels:
+                                  app: simple-test
+                              spec:
+                                containers:
+                                - name: nginx
+                                  image: nginx:latest
+                                  ports:
+                                  - containerPort: 80
+                                  resources:
+                                    requests:
+                                      memory: "64Mi"
+                                      cpu: "250m"
+                                    limits:
+                                      memory: "128Mi"
+                                      cpu: "500m"
+                              EOF
+                          '''
+                      }
+                  }
+              }
+              
+              stage('Verify Deployment') {
+                  steps {
+                      sh '''
+                          echo "Waiting for pod to be ready..."
+                          kubectl wait --for=condition=Ready pod/simple-test-pod --timeout=60s
+                          echo "Pod status:"
+                          kubectl get pod simple-test-pod
+                          echo "Pod details:"
+                          kubectl describe pod simple-test-pod
+                      '''
+                  }
+              }
+              
+              stage('Test Pod') {
+                  steps {
+                      sh '''
+                          echo "Testing pod connectivity..."
+                          kubectl exec simple-test-pod -- curl -f http://localhost:80 || echo "Pod is running but curl test failed"
+                      '''
+                  }
+              }
+          }
+          
+          post {
+              always {
+                  echo 'Pipeline completed'
+              }
+              success {
+                  echo 'Pod deployment successful!'
+              }
+              failure {
+                  echo 'Pod deployment failed!'
+                  sh 'kubectl get pods | grep simple-test-pod || echo "Pod not found"'
+              }
+          }
+      }
+        </script>
+        <sandbox>true</sandbox>
+      </definition>
+      <triggers/>
+      <disabled>false</disabled>
+    </flow-definition>
+    EOF
   register: create_job_result
   failed_when: false
 
@@ -119,6 +238,23 @@
       Job 'simple-pod-deployment' created successfully!
       {% else %}
       Job may already exist or creation failed.
+      {% endif %}
+
+- name: "Verify job was created"
+  ansible.builtin.shell: |
+    java -jar /tmp/jenkins-cli.jar -s http://{{ ansible_default_ipv4.address }}:8080 -auth admin:{{ jenkins_admin_password }} list-jobs | grep simple-pod-deployment
+  register: job_verification
+  failed_when: false
+
+- name: "Display job verification result"
+  ansible.builtin.debug:
+    msg: |
+      Job verification:
+      {{ job_verification.stdout }}
+      {% if job_verification.rc == 0 %}
+      Job 'simple-pod-deployment' found in Jenkins!
+      {% else %}
+      Job 'simple-pod-deployment' not found in Jenkins.
       {% endif %}
 
 - name: "Trigger Jenkins pipeline"
